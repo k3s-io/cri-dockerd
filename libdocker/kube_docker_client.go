@@ -154,6 +154,7 @@ func (d *kubeDockerClient) CreateContainer(
 		opts.Config,
 		opts.HostConfig,
 		opts.NetworkingConfig,
+		opts.Platform,
 		opts.Name,
 	)
 	if ctxErr := contextError(ctx); ctxErr != nil {
