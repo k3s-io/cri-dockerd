@@ -41,7 +41,7 @@ import (
 	utilsets "k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/kubernetes/pkg/util/bandwidth"
 	utiliptables "k8s.io/kubernetes/pkg/util/iptables"
-	utilsysctl "k8s.io/kubernetes/pkg/util/sysctl"
+	utilsysctl "k8s.io/component-helpers/node/util/sysctl"
 	utilexec "k8s.io/utils/exec"
 	utilebtables "k8s.io/utils/net/ebtables"
 
