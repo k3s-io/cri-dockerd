@@ -57,20 +57,20 @@ func NewDockerCRICommand(stopCh <-chan struct{}) *cobra.Command {
 			// initial flag parse, since we disable cobra's flag parsing
 			if err := cleanFlagSet.Parse(args); err != nil {
 				cmd.Usage()
-				logrus.Fatal(err)
+				logrus.Panic(err)
 			}
 
 			// check if there are non-flag arguments in the command line
 			cmds := cleanFlagSet.Args()
 			if len(cmds) > 0 {
 				cmd.Usage()
-				logrus.Fatalf("Unknown command: %s", cmds[0])
+				logrus.Panicf("Unknown command: %s", cmds[0])
 			}
 
 			// short-circuit on help
 			help, err := cleanFlagSet.GetBool("help")
 			if err != nil {
-				logrus.Fatal(`"help" flag is non-bool`)
+				logrus.Panic(`"help" flag is non-bool`)
 			}
 			if help {
 				cmd.Help()
@@ -105,13 +105,13 @@ func NewDockerCRICommand(stopCh <-chan struct{}) *cobra.Command {
 			if logFlag != "" {
 				level, err := logrus.ParseLevel(logFlag)
 				if err != nil {
-					logrus.Fatalf("Unknown log level: %s", logFlag)
+					logrus.Panicf("Unknown log level: %s", logFlag)
 				}
 				logrus.SetLevel(level)
 			}
 
 			if err := RunCriDockerd(kubeletFlags, stopCh); err != nil {
-				logrus.Fatal(err)
+				logrus.Panic(err)
 			}
 		},
 	}
