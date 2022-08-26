@@ -31,7 +31,6 @@ import (
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
-	iptablesproxy "k8s.io/kubernetes/pkg/proxy/iptables"
 	"k8s.io/kubernetes/pkg/util/conntrack"
 	utiliptables "k8s.io/kubernetes/pkg/util/iptables"
 	"k8s.io/utils/exec"
@@ -154,7 +153,7 @@ func (hm *hostportManager) Add(
 		writeLine(natRules, "-A", string(chain),
 			"-m", "comment", "--comment", fmt.Sprintf(`"%s hostport %d"`, podFullName, pm.HostPort),
 			"-s", podIP,
-			"-j", string(iptablesproxy.KubeMarkMasqChain))
+			"-j", string(KubeMarkMasqChain))
 
 		// DNAT to the podIP:containerPort
 		hostPortBinding := net.JoinHostPort(podIP, strconv.Itoa(int(pm.ContainerPort)))
@@ -422,7 +421,7 @@ func getExistingHostportIPTablesRules(
 	if err != nil { // if we failed to get any rules
 		return nil, nil, fmt.Errorf("failed to execute iptables-save: %v", err)
 	}
-	existingNATChains := utiliptables.GetChainLines(utiliptables.TableNAT, iptablesData.Bytes())
+	existingNATChains := GetChainLines(utiliptables.TableNAT, iptablesData.Bytes())
 
 	existingHostportChains := make(map[utiliptables.Chain]string)
 	existingHostportRules := []string{}
