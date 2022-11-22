@@ -19,7 +19,7 @@ package testing
 import (
 	"k8s.io/api/core/v1"
 	kubetypes "k8s.io/apimachinery/pkg/types"
-	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
 	kubecontainer "k8s.io/kubernetes/pkg/kubelet/container"
 )
 
@@ -64,4 +64,8 @@ func (f *FakeRuntimeHelper) GetPodDir(podUID kubetypes.UID) string {
 
 func (f *FakeRuntimeHelper) GetExtraSupplementalGroupsForPod(pod *v1.Pod) []int64 {
 	return nil
+}
+
+func (f *FakeRuntimeHelper) GetOrCreateUserNamespaceMappings(pod *v1.Pod) (*runtimeapi.UserNamespace, error) {
+	return nil, nil
 }

@@ -17,10 +17,12 @@ limitations under the License.
 package iptables
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -51,6 +53,9 @@ type Interface interface {
 	FlushChain(table Table, chain Chain) error
 	// DeleteChain deletes the specified chain.  If the chain did not exist, return error.
 	DeleteChain(table Table, chain Chain) error
+	// ChainExists tests whether the specified chain exists, returning an error if it
+	// does not, or if it is unable to check.
+	ChainExists(table Table, chain Chain) (bool, error)
 	// EnsureRule checks if the specified rule is present and, if not, creates it.  If the rule existed, return true.
 	EnsureRule(position RulePosition, table Table, chain Chain, args ...string) (bool, error)
 	// DeleteRule checks if the specified rule is present and, if so, deletes it.
@@ -86,6 +91,9 @@ type Interface interface {
 	// mapped to the same IP:PORT and consequently some suffer packet
 	// drops.
 	HasRandomFully() bool
+
+	// Present checks if the kernel supports the iptable interface
+	Present() bool
 }
 
 // Protocol defines the ip protocol either ipv4 or ipv6
@@ -279,7 +287,6 @@ func (runner *runner) DeleteChain(table Table, chain Chain) error {
 	runner.mu.Lock()
 	defer runner.mu.Unlock()
 
-	// TODO: we could call iptables -S first, ignore the output and check for non-zero return (more like DeleteRule)
 	out, err := runner.run(opDeleteChain, fullArgs)
 	if err != nil {
 		return fmt.Errorf("error deleting chain %q: %v: %s", chain, err, out)
@@ -418,7 +425,11 @@ func (runner *runner) restoreInternal(args []string, data []byte, flush FlushFla
 	cmd.SetStdin(bytes.NewBuffer(data))
 	b, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%v (%s)", err, b)
+		pErr, ok := parseRestoreError(string(b))
+		if ok {
+			return pErr
+		}
+		return fmt.Errorf("%w: %s", err, b)
 	}
 	return nil
 }
@@ -570,7 +581,7 @@ func (runner *runner) Monitor(canary Chain, tables []Table, reloadFunc func(), i
 
 		// Poll until stopCh is closed or iptables is flushed
 		err := utilwait.PollUntil(interval, func() (bool, error) {
-			if exists, err := runner.chainExists(tables[0], canary); exists {
+			if exists, err := runner.ChainExists(tables[0], canary); exists {
 				return false, nil
 			} else if isResourceError(err) {
 				klog.Warningf("Could not check for iptables canary %s/%s: %v", string(tables[0]), string(canary), err)
@@ -582,7 +593,7 @@ func (runner *runner) Monitor(canary Chain, tables []Table, reloadFunc func(), i
 			// so we don't start reloading too soon.
 			err := utilwait.PollImmediate(iptablesFlushPollTime, iptablesFlushTimeout, func() (bool, error) {
 				for i := 1; i < len(tables); i++ {
-					if exists, err := runner.chainExists(tables[i], canary); exists || isResourceError(err) {
+					if exists, err := runner.ChainExists(tables[i], canary); exists || isResourceError(err) {
 						return false, nil
 					}
 				}
@@ -607,15 +618,14 @@ func (runner *runner) Monitor(canary Chain, tables []Table, reloadFunc func(), i
 	}
 }
 
-// chainExists is used internally by Monitor; none of the public Interface methods can be
-// used to distinguish "chain exists" from "chain does not exist" with no side effects
-func (runner *runner) chainExists(table Table, chain Chain) (bool, error) {
+// ChainExists is part of Interface
+func (runner *runner) ChainExists(table Table, chain Chain) (bool, error) {
 	fullArgs := makeFullArgs(table, chain)
 
 	runner.mu.Lock()
 	defer runner.mu.Unlock()
 
-	trace := utiltrace.New("iptables Monitor CANARY check")
+	trace := utiltrace.New("iptables ChainExists")
 	defer trace.LogIfLong(2 * time.Second)
 
 	_, err := runner.run(opListChain, fullArgs)
@@ -629,7 +639,6 @@ const (
 	opFlushChain  operation = "-F"
 	opDeleteChain operation = "-X"
 	opListChain   operation = "-S"
-	opAppendRule  operation = "-A"
 	opCheckRule   operation = "-C"
 	opDeleteRule  operation = "-D"
 )
@@ -722,6 +731,16 @@ func (runner *runner) HasRandomFully() bool {
 	return runner.hasRandomFully
 }
 
+// Present tests if iptable is supported on current kernel by checking the existence
+// of default table and chain
+func (runner *runner) Present() bool {
+	if _, err := runner.ChainExists(TableNAT, ChainPostrouting); err != nil {
+		return false
+	}
+
+	return true
+}
+
 var iptablesNotFoundStrings = []string{
 	// iptables-legacy [-A|-I] BAD-CHAIN [...]
 	// iptables-legacy [-C|-D] GOOD-CHAIN [...non-matching rule...]
@@ -769,4 +788,90 @@ func isResourceError(err error) bool {
 		return ee.ExitStatus() == iptablesStatusResourceProblem
 	}
 	return false
+}
+
+// ParseError records the payload when iptables reports an error parsing its input.
+type ParseError interface {
+	// Line returns the line number on which the parse error was reported.
+	// NOTE: First line is 1.
+	Line() int
+	// Error returns the error message of the parse error, including line number.
+	Error() string
+}
+
+type parseError struct {
+	cmd  string
+	line int
+}
+
+func (e parseError) Line() int {
+	return e.line
+}
+
+func (e parseError) Error() string {
+	return fmt.Sprintf("%s: input error on line %d: ", e.cmd, e.line)
+}
+
+// LineData represents a single numbered line of data.
+type LineData struct {
+	// Line holds the line number (the first line is 1).
+	Line int
+	// The data of the line.
+	Data string
+}
+
+var regexpParseError = regexp.MustCompile("line ([1-9][0-9]*) failed$")
+
+// parseRestoreError extracts the line from the error, if it matches returns parseError
+// for example:
+// input: iptables-restore: line 51 failed
+// output: parseError:  cmd = iptables-restore, line = 51
+// NOTE: parseRestoreError depends on the error format of iptables, if it ever changes
+// we need to update this function
+func parseRestoreError(str string) (ParseError, bool) {
+	errors := strings.Split(str, ":")
+	if len(errors) != 2 {
+		return nil, false
+	}
+	cmd := errors[0]
+	matches := regexpParseError.FindStringSubmatch(errors[1])
+	if len(matches) != 2 {
+		return nil, false
+	}
+	line, errMsg := strconv.Atoi(matches[1])
+	if errMsg != nil {
+		return nil, false
+	}
+	return parseError{cmd: cmd, line: line}, true
+}
+
+// ExtractLines extracts the -count and +count data from the lineNum row of lines and return
+// NOTE: lines start from line 1
+func ExtractLines(lines []byte, line, count int) []LineData {
+	// first line is line 1, so line can't be smaller than 1
+	if line < 1 {
+		return nil
+	}
+	start := line - count
+	if start <= 0 {
+		start = 1
+	}
+	end := line + count + 1
+
+	offset := 1
+	scanner := bufio.NewScanner(bytes.NewBuffer(lines))
+	extractLines := make([]LineData, 0, count*2)
+	for scanner.Scan() {
+		if offset >= start && offset < end {
+			extractLines = append(extractLines, LineData{
+				Line: offset,
+				Data: scanner.Text(),
+			})
+		}
+		if offset == end {
+			break
+		}
+		offset++
+	}
+	return extractLines
 }
