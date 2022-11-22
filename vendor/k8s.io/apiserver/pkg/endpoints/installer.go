@@ -19,14 +19,14 @@ package endpoints
 import (
 	"fmt"
 	"net/http"
-	gpath "path"
 	"reflect"
 	"sort"
 	"strings"
 	"time"
 	"unicode"
 
-	restful "github.com/emicklei/go-restful"
+	restful "github.com/emicklei/go-restful/v3"
+	apidiscoveryv2beta1 "k8s.io/api/apidiscovery/v2beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/conversion"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -46,6 +46,7 @@ import (
 	"k8s.io/apiserver/pkg/storageversion"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	versioninfo "k8s.io/component-base/version"
+	"sigs.k8s.io/structured-merge-diff/v4/fieldpath"
 )
 
 const (
@@ -66,6 +67,91 @@ type action struct {
 	Params        []*restful.Parameter // List of parameters associated with the action.
 	Namer         handlers.ScopeNamer
 	AllNamespaces bool // true iff the action is namespaced but works on aggregate result for all namespaces
+}
+
+func ConvertGroupVersionIntoToDiscovery(list []metav1.APIResource) ([]apidiscoveryv2beta1.APIResourceDiscovery, error) {
+	var apiResourceList []apidiscoveryv2beta1.APIResourceDiscovery
+	parentResources := make(map[string]int)
+
+	// Loop through all top-level resources
+	for _, r := range list {
+		if strings.Contains(r.Name, "/") {
+			// Skip subresources for now so we can get the list of resources
+			continue
+		}
+
+		var scope apidiscoveryv2beta1.ResourceScope
+		if r.Namespaced {
+			scope = apidiscoveryv2beta1.ScopeNamespace
+		} else {
+			scope = apidiscoveryv2beta1.ScopeCluster
+		}
+
+		resource := apidiscoveryv2beta1.APIResourceDiscovery{
+			Resource: r.Name,
+			Scope:    scope,
+			ResponseKind: &metav1.GroupVersionKind{
+				Group:   r.Group,
+				Version: r.Version,
+				Kind:    r.Kind,
+			},
+			Verbs:            r.Verbs,
+			ShortNames:       r.ShortNames,
+			Categories:       r.Categories,
+			SingularResource: r.SingularName,
+		}
+		apiResourceList = append(apiResourceList, resource)
+		parentResources[r.Name] = len(apiResourceList) - 1
+	}
+
+	// Loop through all subresources
+	for _, r := range list {
+		// Split resource name and subresource name
+		split := strings.SplitN(r.Name, "/", 2)
+
+		if len(split) != 2 {
+			// Skip parent resources
+			continue
+		}
+
+		var scope apidiscoveryv2beta1.ResourceScope
+		if r.Namespaced {
+			scope = apidiscoveryv2beta1.ScopeNamespace
+		} else {
+			scope = apidiscoveryv2beta1.ScopeCluster
+		}
+
+		parentidx, exists := parentResources[split[0]]
+		if !exists {
+			// If a subresource exists without a parent, create a parent
+			apiResourceList = append(apiResourceList, apidiscoveryv2beta1.APIResourceDiscovery{
+				Resource: split[0],
+				Scope:    scope,
+			})
+			parentidx = len(apiResourceList) - 1
+			parentResources[split[0]] = parentidx
+		}
+
+		if apiResourceList[parentidx].Scope != scope {
+			return nil, fmt.Errorf("Error: Parent %s (scope: %s) and subresource %s (scope: %s) scope do not match", split[0], apiResourceList[parentidx].Scope, split[1], scope)
+			//
+		}
+
+		subresource := apidiscoveryv2beta1.APISubresourceDiscovery{
+			Subresource: split[1],
+			Verbs:       r.Verbs,
+		}
+		if r.Kind != "" {
+			subresource.ResponseKind = &metav1.GroupVersionKind{
+				Group:   r.Group,
+				Version: r.Version,
+				Kind:    r.Kind,
+			}
+		}
+		apiResourceList[parentidx].Subresources = append(apiResourceList[parentidx].Subresources, subresource)
+	}
+
+	return apiResourceList, nil
 }
 
 // An interface to see if one storage supports override its default verb for monitoring
@@ -216,7 +302,7 @@ func (a *APIInstaller) registerResourceHandlers(path string, storage rest.Storag
 	isSubresource := len(subresource) > 0
 
 	// If there is a subresource, namespace scoping is defined by the parent resource
-	namespaceScoped := true
+	var namespaceScoped bool
 	if isSubresource {
 		parentStorage, ok := a.group.Storage[resource]
 		if !ok {
@@ -250,21 +336,20 @@ func (a *APIInstaller) registerResourceHandlers(path string, storage rest.Storag
 	connecter, isConnecter := storage.(rest.Connecter)
 	storageMeta, isMetadata := storage.(rest.StorageMetadata)
 	storageVersionProvider, isStorageVersionProvider := storage.(rest.StorageVersionProvider)
+	gvAcceptor, _ := storage.(rest.GroupVersionAcceptor)
 	if !isMetadata {
 		storageMeta = defaultStorageMetadata{}
-	}
-	exporter, isExporter := storage.(rest.Exporter)
-	if !isExporter {
-		exporter = nil
-	}
-
-	versionedExportOptions, err := a.group.Creater.New(optionsExternalVersion.WithKind("ExportOptions"))
-	if err != nil {
-		return nil, nil, err
 	}
 
 	if isNamedCreater {
 		isCreater = true
+	}
+
+	var resetFields map[fieldpath.APIVersion]*fieldpath.Set
+	if a.group.OpenAPIModels != nil {
+		if resetFieldsStrategy, isResetFieldsStrategy := storage.(rest.ResetFieldsStrategy); isResetFieldsStrategy {
+			resetFields = resetFieldsStrategy.GetResetFields()
+		}
 	}
 
 	var versionedList interface{}
@@ -428,10 +513,8 @@ func (a *APIInstaller) registerResourceHandlers(path string, storage rest.Storag
 		apiResource.Namespaced = false
 		apiResource.Kind = resourceKind
 		namer := handlers.ContextBasedNaming{
-			SelfLinker:         a.group.Linker,
-			ClusterScoped:      true,
-			SelfLinkPathPrefix: gpath.Join(a.prefix, resource) + "/",
-			SelfLinkPathSuffix: suffix,
+			Namer:         a.group.Namer,
+			ClusterScoped: true,
 		}
 
 		// Handler for standard REST verbs (GET, PUT, POST and DELETE).
@@ -477,10 +560,8 @@ func (a *APIInstaller) registerResourceHandlers(path string, storage rest.Storag
 		apiResource.Namespaced = true
 		apiResource.Kind = resourceKind
 		namer := handlers.ContextBasedNaming{
-			SelfLinker:         a.group.Linker,
-			ClusterScoped:      false,
-			SelfLinkPathPrefix: gpath.Join(a.prefix, namespaceParamName) + "/",
-			SelfLinkPathSuffix: itemPathSuffix,
+			Namer:         a.group.Namer,
+			ClusterScoped: false,
 		}
 
 		actions = appendIf(actions, action{"LIST", resourcePath, resourceParams, namer, false}, isLister)
@@ -522,6 +603,10 @@ func (a *APIInstaller) registerResourceHandlers(path string, storage rest.Storag
 		if err != nil {
 			return nil, nil, err
 		}
+		decodableVersions := []schema.GroupVersion{}
+		if a.group.ConvertabilityChecker != nil {
+			decodableVersions = a.group.ConvertabilityChecker.VersionsForGroupKind(fqKindToRegister.GroupKind())
+		}
 		resourceInfo = &storageversion.ResourceInfo{
 			GroupResource: schema.GroupResource{
 				Group:    a.group.GroupVersion.Group,
@@ -532,7 +617,14 @@ func (a *APIInstaller) registerResourceHandlers(path string, storage rest.Storag
 			// DecodableVersions immediately because API installation must
 			// be completed first for us to know equivalent APIs
 			EquivalentResourceMapper: a.group.EquivalentResourceRegistry,
+
+			DirectlyDecodableVersions: decodableVersions,
 		}
+	}
+
+	var disabledParams []string
+	if !utilfeature.DefaultFeatureGate.Enabled(features.ServerSideFieldValidation) {
+		disabledParams = []string{"fieldValidation"}
 	}
 
 	// Create Routes for the actions.
@@ -582,6 +674,8 @@ func (a *APIInstaller) registerResourceHandlers(path string, storage rest.Storag
 		Subresource: subresource,
 		Kind:        fqKindToRegister,
 
+		AcceptsGroupVersionDelegate: gvAcceptor,
+
 		HubGroupVersion: schema.GroupVersion{Group: fqKindToRegister.Group, Version: runtime.APIVersionInternal},
 
 		MetaGroupVersion: metav1.SchemeGroupVersion,
@@ -591,7 +685,7 @@ func (a *APIInstaller) registerResourceHandlers(path string, storage rest.Storag
 	if a.group.MetaGroupVersion != nil {
 		reqScope.MetaGroupVersion = *a.group.MetaGroupVersion
 	}
-	if a.group.OpenAPIModels != nil && utilfeature.DefaultFeatureGate.Enabled(features.ServerSideApply) {
+	if a.group.OpenAPIModels != nil {
 		reqScope.FieldManager, err = fieldmanager.NewDefaultFieldManager(
 			a.group.TypeConverter,
 			a.group.UnsafeConvertor,
@@ -599,7 +693,8 @@ func (a *APIInstaller) registerResourceHandlers(path string, storage rest.Storag
 			a.group.Creater,
 			fqKindToRegister,
 			reqScope.HubGroupVersion,
-			isSubresource,
+			subresource,
+			resetFields,
 		)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to create field manager: %v", err)
@@ -660,8 +755,6 @@ func (a *APIInstaller) registerResourceHandlers(path string, storage rest.Storag
 
 		// accumulate endpoint-level warnings
 		var (
-			enableWarningHeaders = utilfeature.DefaultFeatureGate.Enabled(features.WarningHeaders)
-
 			warnings       []string
 			deprecated     bool
 			removedRelease string
@@ -684,7 +777,7 @@ func (a *APIInstaller) registerResourceHandlers(path string, storage rest.Storag
 			if isGetterWithOptions {
 				handler = restfulGetResourceWithOptions(getterWithOptions, reqScope, isSubresource)
 			} else {
-				handler = restfulGetResource(getter, exporter, reqScope)
+				handler = restfulGetResource(getter, reqScope)
 			}
 
 			if needOverride {
@@ -693,9 +786,7 @@ func (a *APIInstaller) registerResourceHandlers(path string, storage rest.Storag
 			} else {
 				handler = metrics.InstrumentRouteFunc(action.Verb, group, version, resource, subresource, requestScope, metrics.APIServerComponent, deprecated, removedRelease, handler)
 			}
-			if enableWarningHeaders {
-				handler = utilwarning.AddWarningsHandler(handler, warnings)
-			}
+			handler = utilwarning.AddWarningsHandler(handler, warnings)
 
 			doc := "read the specified " + kind
 			if isSubresource {
@@ -713,11 +804,6 @@ func (a *APIInstaller) registerResourceHandlers(path string, storage rest.Storag
 					return nil, nil, err
 				}
 			}
-			if isExporter {
-				if err := AddObjectParams(ws, route, versionedExportOptions); err != nil {
-					return nil, nil, err
-				}
-			}
 			addParams(route, action.Params)
 			routes = append(routes, route)
 		case "LIST": // List all resources of a kind.
@@ -726,9 +812,7 @@ func (a *APIInstaller) registerResourceHandlers(path string, storage rest.Storag
 				doc = "list " + subresource + " of objects of kind " + kind
 			}
 			handler := metrics.InstrumentRouteFunc(action.Verb, group, version, resource, subresource, requestScope, metrics.APIServerComponent, deprecated, removedRelease, restfulListResource(lister, watcher, reqScope, false, a.minRequestTimeout))
-			if enableWarningHeaders {
-				handler = utilwarning.AddWarningsHandler(handler, warnings)
-			}
+			handler = utilwarning.AddWarningsHandler(handler, warnings)
 			route := ws.GET(action.Path).To(handler).
 				Doc(doc).
 				Param(ws.QueryParameter("pretty", "If 'true', then the output is pretty printed.")).
@@ -761,9 +845,7 @@ func (a *APIInstaller) registerResourceHandlers(path string, storage rest.Storag
 				doc = "replace " + subresource + " of the specified " + kind
 			}
 			handler := metrics.InstrumentRouteFunc(action.Verb, group, version, resource, subresource, requestScope, metrics.APIServerComponent, deprecated, removedRelease, restfulUpdateResource(updater, reqScope, admit))
-			if enableWarningHeaders {
-				handler = utilwarning.AddWarningsHandler(handler, warnings)
-			}
+			handler = utilwarning.AddWarningsHandler(handler, warnings)
 			route := ws.PUT(action.Path).To(handler).
 				Doc(doc).
 				Param(ws.QueryParameter("pretty", "If 'true', then the output is pretty printed.")).
@@ -775,7 +857,7 @@ func (a *APIInstaller) registerResourceHandlers(path string, storage rest.Storag
 				Returns(http.StatusCreated, "Created", producedObject).
 				Reads(defaultVersionedObject).
 				Writes(producedObject)
-			if err := AddObjectParams(ws, route, versionedUpdateOptions); err != nil {
+			if err := AddObjectParams(ws, route, versionedUpdateOptions, disabledParams...); err != nil {
 				return nil, nil, err
 			}
 			addParams(route, action.Params)
@@ -789,14 +871,10 @@ func (a *APIInstaller) registerResourceHandlers(path string, storage rest.Storag
 				string(types.JSONPatchType),
 				string(types.MergePatchType),
 				string(types.StrategicMergePatchType),
-			}
-			if utilfeature.DefaultFeatureGate.Enabled(features.ServerSideApply) {
-				supportedTypes = append(supportedTypes, string(types.ApplyPatchType))
+				string(types.ApplyPatchType),
 			}
 			handler := metrics.InstrumentRouteFunc(action.Verb, group, version, resource, subresource, requestScope, metrics.APIServerComponent, deprecated, removedRelease, restfulPatchResource(patcher, reqScope, admit, supportedTypes))
-			if enableWarningHeaders {
-				handler = utilwarning.AddWarningsHandler(handler, warnings)
-			}
+			handler = utilwarning.AddWarningsHandler(handler, warnings)
 			route := ws.PATCH(action.Path).To(handler).
 				Doc(doc).
 				Param(ws.QueryParameter("pretty", "If 'true', then the output is pretty printed.")).
@@ -804,9 +882,11 @@ func (a *APIInstaller) registerResourceHandlers(path string, storage rest.Storag
 				Operation("patch"+namespaced+kind+strings.Title(subresource)+operationSuffix).
 				Produces(append(storageMeta.ProducesMIMETypes(action.Verb), mediaTypes...)...).
 				Returns(http.StatusOK, "OK", producedObject).
+				// Patch can return 201 when a server side apply is requested
+				Returns(http.StatusCreated, "Created", producedObject).
 				Reads(metav1.Patch{}).
 				Writes(producedObject)
-			if err := AddObjectParams(ws, route, versionedPatchOptions); err != nil {
+			if err := AddObjectParams(ws, route, versionedPatchOptions, disabledParams...); err != nil {
 				return nil, nil, err
 			}
 			addParams(route, action.Params)
@@ -819,9 +899,7 @@ func (a *APIInstaller) registerResourceHandlers(path string, storage rest.Storag
 				handler = restfulCreateResource(creater, reqScope, admit)
 			}
 			handler = metrics.InstrumentRouteFunc(action.Verb, group, version, resource, subresource, requestScope, metrics.APIServerComponent, deprecated, removedRelease, handler)
-			if enableWarningHeaders {
-				handler = utilwarning.AddWarningsHandler(handler, warnings)
-			}
+			handler = utilwarning.AddWarningsHandler(handler, warnings)
 			article := GetArticleForNoun(kind, " ")
 			doc := "create" + article + kind
 			if isSubresource {
@@ -839,7 +917,7 @@ func (a *APIInstaller) registerResourceHandlers(path string, storage rest.Storag
 				Returns(http.StatusAccepted, "Accepted", producedObject).
 				Reads(defaultVersionedObject).
 				Writes(producedObject)
-			if err := AddObjectParams(ws, route, versionedCreateOptions); err != nil {
+			if err := AddObjectParams(ws, route, versionedCreateOptions, disabledParams...); err != nil {
 				return nil, nil, err
 			}
 			addParams(route, action.Params)
@@ -855,9 +933,7 @@ func (a *APIInstaller) registerResourceHandlers(path string, storage rest.Storag
 				deleteReturnType = producedObject
 			}
 			handler := metrics.InstrumentRouteFunc(action.Verb, group, version, resource, subresource, requestScope, metrics.APIServerComponent, deprecated, removedRelease, restfulDeleteResource(gracefulDeleter, isGracefulDeleter, reqScope, admit))
-			if enableWarningHeaders {
-				handler = utilwarning.AddWarningsHandler(handler, warnings)
-			}
+			handler = utilwarning.AddWarningsHandler(handler, warnings)
 			route := ws.DELETE(action.Path).To(handler).
 				Doc(doc).
 				Param(ws.QueryParameter("pretty", "If 'true', then the output is pretty printed.")).
@@ -881,9 +957,7 @@ func (a *APIInstaller) registerResourceHandlers(path string, storage rest.Storag
 				doc = "delete collection of " + subresource + " of a " + kind
 			}
 			handler := metrics.InstrumentRouteFunc(action.Verb, group, version, resource, subresource, requestScope, metrics.APIServerComponent, deprecated, removedRelease, restfulDeleteCollection(collectionDeleter, isCollectionDeleter, reqScope, admit))
-			if enableWarningHeaders {
-				handler = utilwarning.AddWarningsHandler(handler, warnings)
-			}
+			handler = utilwarning.AddWarningsHandler(handler, warnings)
 			route := ws.DELETE(action.Path).To(handler).
 				Doc(doc).
 				Param(ws.QueryParameter("pretty", "If 'true', then the output is pretty printed.")).
@@ -911,9 +985,7 @@ func (a *APIInstaller) registerResourceHandlers(path string, storage rest.Storag
 			}
 			doc += ". deprecated: use the 'watch' parameter with a list operation instead, filtered to a single item with the 'fieldSelector' parameter."
 			handler := metrics.InstrumentRouteFunc(action.Verb, group, version, resource, subresource, requestScope, metrics.APIServerComponent, deprecated, removedRelease, restfulListResource(lister, watcher, reqScope, true, a.minRequestTimeout))
-			if enableWarningHeaders {
-				handler = utilwarning.AddWarningsHandler(handler, warnings)
-			}
+			handler = utilwarning.AddWarningsHandler(handler, warnings)
 			route := ws.GET(action.Path).To(handler).
 				Doc(doc).
 				Param(ws.QueryParameter("pretty", "If 'true', then the output is pretty printed.")).
@@ -934,9 +1006,7 @@ func (a *APIInstaller) registerResourceHandlers(path string, storage rest.Storag
 			}
 			doc += ". deprecated: use the 'watch' parameter with a list operation instead."
 			handler := metrics.InstrumentRouteFunc(action.Verb, group, version, resource, subresource, requestScope, metrics.APIServerComponent, deprecated, removedRelease, restfulListResource(lister, watcher, reqScope, true, a.minRequestTimeout))
-			if enableWarningHeaders {
-				handler = utilwarning.AddWarningsHandler(handler, warnings)
-			}
+			handler = utilwarning.AddWarningsHandler(handler, warnings)
 			route := ws.GET(action.Path).To(handler).
 				Doc(doc).
 				Param(ws.QueryParameter("pretty", "If 'true', then the output is pretty printed.")).
@@ -960,9 +1030,7 @@ func (a *APIInstaller) registerResourceHandlers(path string, storage rest.Storag
 					doc = "connect " + method + " requests to " + subresource + " of " + kind
 				}
 				handler := metrics.InstrumentRouteFunc(action.Verb, group, version, resource, subresource, requestScope, metrics.APIServerComponent, deprecated, removedRelease, restfulConnectResource(connecter, reqScope, admit, path, isSubresource))
-				if enableWarningHeaders {
-					handler = utilwarning.AddWarningsHandler(handler, warnings)
-				}
+				handler = utilwarning.AddWarningsHandler(handler, warnings)
 				route := ws.Method(method).Path(action.Path).
 					To(handler).
 					Doc(doc).
@@ -1066,7 +1134,7 @@ func AddObjectParams(ws *restful.WebService, route *restful.RouteBuilder, obj in
 			}
 			switch sf.Type.Kind() {
 			case reflect.Interface, reflect.Struct:
-			case reflect.Ptr:
+			case reflect.Pointer:
 				// TODO: This is a hack to let metav1.Time through. This needs to be fixed in a more generic way eventually. bug #36191
 				if (sf.Type.Elem().Kind() == reflect.Interface || sf.Type.Elem().Kind() == reflect.Struct) && strings.TrimPrefix(sf.Type.String(), "*") != "metav1.Time" {
 					continue
@@ -1227,9 +1295,9 @@ func restfulPatchResource(r rest.Patcher, scope handlers.RequestScope, admit adm
 	}
 }
 
-func restfulGetResource(r rest.Getter, e rest.Exporter, scope handlers.RequestScope) restful.RouteFunction {
+func restfulGetResource(r rest.Getter, scope handlers.RequestScope) restful.RouteFunction {
 	return func(req *restful.Request, res *restful.Response) {
-		handlers.GetResource(r, e, &scope)(res.ResponseWriter, req.Request)
+		handlers.GetResource(r, &scope)(res.ResponseWriter, req.Request)
 	}
 }
 

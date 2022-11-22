@@ -20,16 +20,15 @@ import (
 	"net/http"
 	"time"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
 // TODO: Reconcile custom types in kubelet/types and this subpackage
 
-// HTTPGetter is an interface representing the ability to perform HTTP GET requests.
-type HTTPGetter interface {
-	// Get issues a GET to the specified URL.
-	Get(url string) (*http.Response, error)
+// HTTPDoer encapsulates http.Do functionality
+type HTTPDoer interface {
+	Do(req *http.Request) (*http.Response, error)
 }
 
 // Timestamp wraps around time.Time and offers utilities to format and parse
@@ -61,7 +60,7 @@ func (t *Timestamp) GetString() string {
 	return t.time.Format(RFC3339NanoFixed)
 }
 
-// A type to help sort container statuses based on container names.
+// SortedContainerStatuses is a type to help sort container statuses based on container names.
 type SortedContainerStatuses []v1.ContainerStatus
 
 func (s SortedContainerStatuses) Len() int      { return len(s) }
@@ -87,6 +86,8 @@ func SortInitContainerStatuses(p *v1.Pod, statuses []v1.ContainerStatus) {
 	}
 }
 
+// SortStatusesOfInitContainers returns the statuses of InitContainers of pod p,
+// in the order that they appear in its spec.
 func SortStatusesOfInitContainers(p *v1.Pod, statusMap map[string]*v1.ContainerStatus) []v1.ContainerStatus {
 	containers := p.Spec.InitContainers
 	statuses := []v1.ContainerStatus{}
@@ -106,8 +107,8 @@ type Reservation struct {
 	Kubernetes v1.ResourceList
 }
 
-// A pod UID which has been translated/resolved to the representation known to kubelets.
+// ResolvedPodUID is a pod UID which has been translated/resolved to the representation known to kubelets.
 type ResolvedPodUID types.UID
 
-// A pod UID for a mirror pod.
+// MirrorPodUID is a pod UID for a mirror pod.
 type MirrorPodUID types.UID

@@ -17,21 +17,39 @@ limitations under the License.
 package types
 
 const (
-	// system default DNS resolver configuration
+	// ResolvConfDefault is the system default DNS resolver configuration.
 	ResolvConfDefault = "/etc/resolv.conf"
+	// RFC3339NanoFixed is the fixed width version of time.RFC3339Nano.
+	RFC3339NanoFixed = "2006-01-02T15:04:05.000000000Z07:00"
+	// RFC3339NanoLenient is the variable width RFC3339 time format for lenient parsing of strings into timestamps.
+	RFC3339NanoLenient = "2006-01-02T15:04:05.999999999Z07:00"
+)
 
-	// different container runtimes
-	DockerContainerRuntime = "docker"
+// Different container runtimes.
+const (
 	RemoteContainerRuntime = "remote"
+)
 
-	// User visible keys for managing node allocatable enforcement on the node.
+// User visible keys for managing node allocatable enforcement on the node.
+const (
 	NodeAllocatableEnforcementKey = "pods"
 	SystemReservedEnforcementKey  = "system-reserved"
 	KubeReservedEnforcementKey    = "kube-reserved"
 	NodeAllocatableNoneKey        = "none"
+)
 
-	// fixed width version of time.RFC3339Nano
-	RFC3339NanoFixed = "2006-01-02T15:04:05.000000000Z07:00"
-	// variable width RFC3339 time format for lenient parsing of strings into timestamps
-	RFC3339NanoLenient = "2006-01-02T15:04:05.999999999Z07:00"
+// SwapBehavior types
+const (
+	LimitedSwap   = "LimitedSwap"
+	UnlimitedSwap = "UnlimitedSwap"
+)
+
+// Alpha conditions managed by Kubelet that are not yet part of the API. The
+// entries here should be moved to staging/src/k8s.io.api/core/v1/types.go
+// once the feature managing the condition graduates to Beta.
+const (
+	// PodHasNetwork indicates networking has been configured successfully for the
+	// pod and IP address(es) assigned. Images for containers specified in the pod
+	// spec can be pulled and containers launched after this condition is true.
+	PodHasNetwork = "PodHasNetwork"
 )

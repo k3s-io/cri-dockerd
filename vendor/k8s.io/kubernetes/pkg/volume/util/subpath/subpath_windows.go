@@ -1,3 +1,4 @@
+//go:build windows
 // +build windows
 
 /*
@@ -75,7 +76,7 @@ func getUpperPath(path string) string {
 // Check whether a directory/file is a link type or not
 // LinkType could be SymbolicLink, Junction, or HardLink
 func isLinkPath(path string) (bool, error) {
-	cmd := fmt.Sprintf("(Get-Item -Path %s).LinkType", path)
+	cmd := fmt.Sprintf("(Get-Item -LiteralPath %q).LinkType", path)
 	output, err := exec.Command("powershell", "/c", cmd).CombinedOutput()
 	if err != nil {
 		return false, err
@@ -113,7 +114,8 @@ func evalSymlink(path string) (string, error) {
 		}
 	}
 	// This command will give the target path of a given symlink
-	cmd := fmt.Sprintf("(Get-Item -Path %s).Target", upperpath)
+	// The -Force parameter will allow Get-Item to also evaluate hidden folders, like AppData.
+	cmd := fmt.Sprintf("(Get-Item -Force -LiteralPath %q).Target", upperpath)
 	output, err := exec.Command("powershell", "/c", cmd).CombinedOutput()
 	if err != nil {
 		return "", err
@@ -124,7 +126,7 @@ func evalSymlink(path string) (string, error) {
 		klog.V(4).Infof("Path '%s' has a target %s. Return its original form.", path, linkedPath)
 		return path, nil
 	}
-	// If the target is not an absoluate path, join iit with the current upperpath
+	// If the target is not an absolute path, join iit with the current upperpath
 	if !filepath.IsAbs(linkedPath) {
 		linkedPath = filepath.Join(getUpperPath(upperpath), linkedPath)
 	}

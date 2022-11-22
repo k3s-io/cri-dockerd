@@ -20,8 +20,9 @@ import (
 	"path"
 	"time"
 
-	restful "github.com/emicklei/go-restful"
+	restful "github.com/emicklei/go-restful/v3"
 
+	apidiscoveryv2beta1 "k8s.io/api/apidiscovery/v2beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -35,6 +36,13 @@ import (
 	"k8s.io/apiserver/pkg/storageversion"
 	openapiproto "k8s.io/kube-openapi/pkg/util/proto"
 )
+
+// ConvertabilityChecker indicates what versions a GroupKind is available in.
+type ConvertabilityChecker interface {
+	// VersionsForGroupKind indicates what versions are available to convert a group kind. This determines
+	// what our decoding abilities are.
+	VersionsForGroupKind(gk schema.GroupKind) []schema.GroupVersion
+}
 
 // APIGroupVersion is a helper for exposing rest.Storage objects as http.Handlers via go-restful
 // It handles URLs of the form:
@@ -67,13 +75,14 @@ type APIGroupVersion struct {
 	Serializer     runtime.NegotiatedSerializer
 	ParameterCodec runtime.ParameterCodec
 
-	Typer           runtime.ObjectTyper
-	Creater         runtime.ObjectCreater
-	Convertor       runtime.ObjectConvertor
-	Defaulter       runtime.ObjectDefaulter
-	Linker          runtime.SelfLinker
-	UnsafeConvertor runtime.ObjectConvertor
-	TypeConverter   fieldmanager.TypeConverter
+	Typer                 runtime.ObjectTyper
+	Creater               runtime.ObjectCreater
+	Convertor             runtime.ObjectConvertor
+	ConvertabilityChecker ConvertabilityChecker
+	Defaulter             runtime.ObjectDefaulter
+	Namer                 runtime.Namer
+	UnsafeConvertor       runtime.ObjectConvertor
+	TypeConverter         fieldmanager.TypeConverter
 
 	EquivalentResourceRegistry runtime.EquivalentResourceRegistry
 
@@ -97,7 +106,7 @@ type APIGroupVersion struct {
 // InstallREST registers the REST handlers (storage, watch, proxy and redirect) into a restful Container.
 // It is expected that the provided path root prefix will serve all operations. Root MUST NOT end
 // in a slash.
-func (g *APIGroupVersion) InstallREST(container *restful.Container) ([]*storageversion.ResourceInfo, error) {
+func (g *APIGroupVersion) InstallREST(container *restful.Container) ([]apidiscoveryv2beta1.APIResourceDiscovery, []*storageversion.ResourceInfo, error) {
 	prefix := path.Join(g.Root, g.GroupVersion.Group, g.GroupVersion.Version)
 	installer := &APIInstaller{
 		group:             g,
@@ -109,7 +118,11 @@ func (g *APIGroupVersion) InstallREST(container *restful.Container) ([]*storagev
 	versionDiscoveryHandler := discovery.NewAPIVersionHandler(g.Serializer, g.GroupVersion, staticLister{apiResources})
 	versionDiscoveryHandler.AddToWebService(ws)
 	container.Add(ws)
-	return removeNonPersistedResources(resourceInfos), utilerrors.NewAggregate(registrationErrors)
+	aggregatedDiscoveryResources, err := ConvertGroupVersionIntoToDiscovery(apiResources)
+	if err != nil {
+		registrationErrors = append(registrationErrors, err)
+	}
+	return aggregatedDiscoveryResources, removeNonPersistedResources(resourceInfos), utilerrors.NewAggregate(registrationErrors)
 }
 
 func removeNonPersistedResources(infos []*storageversion.ResourceInfo) []*storageversion.ResourceInfo {

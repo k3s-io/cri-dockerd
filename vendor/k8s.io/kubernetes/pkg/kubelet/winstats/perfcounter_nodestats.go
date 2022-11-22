@@ -1,3 +1,4 @@
+//go:build windows
 // +build windows
 
 /*
@@ -24,15 +25,23 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 	"unsafe"
 
 	cadvisorapi "github.com/google/cadvisor/info/v1"
 	"golang.org/x/sys/windows"
+	"golang.org/x/sys/windows/registry"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
+)
+
+const (
+	bootIdRegistry = `SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters`
+	bootIdKey      = `BootId`
 )
 
 // MemoryStatusEx is the same as Windows structure MEMORYSTATUSEX
@@ -50,9 +59,12 @@ type MemoryStatusEx struct {
 }
 
 var (
-	modkernel32              = windows.NewLazySystemDLL("kernel32.dll")
-	procGlobalMemoryStatusEx = modkernel32.NewProc("GlobalMemoryStatusEx")
+	modkernel32                 = windows.NewLazySystemDLL("kernel32.dll")
+	procGlobalMemoryStatusEx    = modkernel32.NewProc("GlobalMemoryStatusEx")
+	procGetActiveProcessorCount = modkernel32.NewProc("GetActiveProcessorCount")
 )
+
+const allProcessorGroups = 0xFFFF
 
 // NewPerfCounterClient creates a client using perf counters
 func NewPerfCounterClient() (Client, error) {
@@ -139,12 +151,38 @@ func (p *perfCounterNodeStatsClient) getMachineInfo() (*cadvisorapi.MachineInfo,
 		return nil, err
 	}
 
+	bootId, err := getBootID()
+	if err != nil {
+		return nil, err
+	}
+
 	return &cadvisorapi.MachineInfo{
-		NumCores:       runtime.NumCPU(),
+		NumCores:       processorCount(),
 		MemoryCapacity: p.nodeInfo.memoryPhysicalCapacityBytes,
 		MachineID:      hostname,
 		SystemUUID:     systemUUID,
+		BootID:         bootId,
 	}, nil
+}
+
+// runtime.NumCPU() will only return the information for a single Processor Group.
+// Since a single group can only hold 64 logical processors, this
+// means when there are more they will be divided into multiple groups.
+// For the above reason, procGetActiveProcessorCount is used to get the
+// cpu count for all processor groups of the windows node.
+// more notes for this issue:
+// same issue in moby: https://github.com/moby/moby/issues/38935#issuecomment-744638345
+// solution in hcsshim: https://github.com/microsoft/hcsshim/blob/master/internal/processorinfo/processor_count.go
+func processorCount() int {
+	if amount := getActiveProcessorCount(allProcessorGroups); amount != 0 {
+		return int(amount)
+	}
+	return runtime.NumCPU()
+}
+
+func getActiveProcessorCount(groupNumber uint16) int {
+	r0, _, _ := syscall.Syscall(procGetActiveProcessorCount.Addr(), 1, uintptr(groupNumber), 0, 0)
+	return int(r0)
 }
 
 func (p *perfCounterNodeStatsClient) getVersionInfo() (*cadvisorapi.VersionInfo, error) {
@@ -168,25 +206,25 @@ func (p *perfCounterNodeStatsClient) collectMetricsData(cpuCounter, memWorkingSe
 	cpuValue, err := cpuCounter.getData()
 	cpuCores := runtime.NumCPU()
 	if err != nil {
-		klog.Errorf("Unable to get cpu perf counter data; err: %v", err)
+		klog.ErrorS(err, "Unable to get cpu perf counter data")
 		return
 	}
 
 	memWorkingSetValue, err := memWorkingSetCounter.getData()
 	if err != nil {
-		klog.Errorf("Unable to get memWorkingSet perf counter data; err: %v", err)
+		klog.ErrorS(err, "Unable to get memWorkingSet perf counter data")
 		return
 	}
 
 	memCommittedBytesValue, err := memCommittedBytesCounter.getData()
 	if err != nil {
-		klog.Errorf("Unable to get memCommittedBytes perf counter data; err: %v", err)
+		klog.ErrorS(err, "Unable to get memCommittedBytes perf counter data")
 		return
 	}
 
 	networkAdapterStats, err := networkAdapterCounter.getData()
 	if err != nil {
-		klog.Errorf("Unable to get network adapter perf counter data; err: %v", err)
+		klog.ErrorS(err, "Unable to get network adapter perf counter data")
 		return
 	}
 
@@ -249,4 +287,17 @@ func getPhysicallyInstalledSystemMemoryBytes() (uint64, error) {
 	}
 
 	return statex.TotalPhys, nil
+}
+
+func getBootID() (string, error) {
+	regKey, err := registry.OpenKey(registry.LOCAL_MACHINE, bootIdRegistry, registry.READ)
+	if err != nil {
+		return "", err
+	}
+	defer regKey.Close()
+	regValue, _, err := regKey.GetIntegerValue(bootIdKey)
+	if err != nil {
+		return "", err
+	}
+	return strconv.FormatUint(regValue, 10), nil
 }
