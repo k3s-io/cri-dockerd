@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 /*
@@ -20,7 +21,6 @@ package core
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -65,11 +65,10 @@ func TestGetSeccompSecurityOpts(t *testing.T) {
 }
 
 func TestLoadSeccompLocalhostProfiles(t *testing.T) {
-	tmpdir, err := ioutil.TempDir("", "seccomp-local-profile-test")
-	require.NoError(t, err)
+	tmpdir := filepath.Join(os.TempDir(), "seccomp-local-profile-test")
 	defer os.RemoveAll(tmpdir)
 	testProfile := `{"foo": "bar"}`
-	err = ioutil.WriteFile(filepath.Join(tmpdir, "test"), []byte(testProfile), 0644)
+	err := os.WriteFile(filepath.Join(tmpdir, "test"), []byte(testProfile), 0644)
 	require.NoError(t, err)
 
 	tests := []struct {
