@@ -18,19 +18,20 @@ package core
 
 import (
 	"fmt"
+	"os"
+	"strings"
+	"time"
+
 	"github.com/Mirantis/cri-dockerd/libdocker"
 	"github.com/Mirantis/cri-dockerd/utils"
 	"github.com/Mirantis/cri-dockerd/utils/errors"
 	"k8s.io/kubernetes/pkg/credentialprovider"
-	"os"
-	"strings"
-	"time"
 
 	"github.com/Mirantis/cri-dockerd/config"
 	dockertypes "github.com/docker/docker/api/types"
 	dockercontainer "github.com/docker/docker/api/types/container"
 	"github.com/sirupsen/logrus"
-	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
 
 const (

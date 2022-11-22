@@ -19,7 +19,8 @@ package core
 import (
 	"context"
 	"fmt"
-	v1 "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+
+	v1 "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
 
 // StartContainer starts the container.
@@ -58,4 +59,3 @@ func transformStartContainerError(err error) error {
 	}
 	return err
 }
-

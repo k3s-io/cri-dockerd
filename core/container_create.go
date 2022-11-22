@@ -19,12 +19,13 @@ package core
 import (
 	"context"
 	"fmt"
+	"path/filepath"
+
 	"github.com/Mirantis/cri-dockerd/libdocker"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/strslice"
-	v1 "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
-	"path/filepath"
+	v1 "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
 
 // CreateContainer creates a new container in the given PodSandbox
@@ -159,4 +160,3 @@ func (ds *dockerService) CreateContainer(
 
 	return nil, createErr
 }
-
