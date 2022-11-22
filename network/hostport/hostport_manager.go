@@ -421,6 +421,7 @@ func getExistingHostportIPTablesRules(
 	if err != nil { // if we failed to get any rules
 		return nil, nil, fmt.Errorf("failed to execute iptables-save: %v", err)
 	}
+
 	existingNATChains := GetChainLines(utiliptables.TableNAT, iptablesData.Bytes())
 
 	existingHostportChains := make(map[utiliptables.Chain]string)

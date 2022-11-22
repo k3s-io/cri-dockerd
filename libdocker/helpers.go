@@ -18,11 +18,12 @@ package libdocker
 
 import (
 	"fmt"
-	"github.com/docker/go-connections/nat"
-	v1 "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/docker/go-connections/nat"
+	v1 "k8s.io/cri-api/pkg/apis/runtime/v1"
 
 	dockerref "github.com/docker/distribution/reference"
 	dockertypes "github.com/docker/docker/api/types"
@@ -288,4 +289,3 @@ func MakePortsAndBindings(
 	}
 	return exposedPorts, portBindings
 }
-

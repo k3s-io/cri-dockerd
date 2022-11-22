@@ -42,7 +42,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	v1 "k8s.io/api/core/v1"
-	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
 
 const (
@@ -451,4 +451,19 @@ func (ds *dockerService) getDockerVersionFromCache() (*dockertypes.Version, erro
 		return nil, fmt.Errorf("converted to *dockertype.Version error")
 	}
 	return dv, nil
+}
+
+func (ds *dockerService) CheckpointContainer(ctx context.Context, options *runtimeapi.CheckpointContainerRequest) (*runtimeapi.CheckpointContainerResponse, error) {
+	return nil, nil
+}
+func (ds *dockerService) GetContainerEvents(eventReq *runtimeapi.GetEventsRequest, containerEventServer runtimeapi.RuntimeService_GetContainerEventsServer) error {
+	return nil
+}
+
+func (ds *dockerService) ListMetricDescriptors(ctx context.Context, s *runtimeapi.ListMetricDescriptorsRequest) (*runtimeapi.ListMetricDescriptorsResponse, error) {
+	return nil, nil
+}
+
+func (ds *dockerService) ListPodSandboxMetrics(ctx context.Context, s *runtimeapi.ListPodSandboxMetricsRequest) (*runtimeapi.ListPodSandboxMetricsResponse, error) {
+	return nil, nil
 }
