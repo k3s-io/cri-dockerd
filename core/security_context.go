@@ -21,15 +21,16 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
-	"github.com/Mirantis/cri-dockerd/config"
 	"io/ioutil"
 	"path/filepath"
 	"strconv"
 	"strings"
 
+	"github.com/Mirantis/cri-dockerd/config"
+
 	dockercontainer "github.com/docker/docker/api/types/container"
 
-	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
 
 	knetwork "github.com/Mirantis/cri-dockerd/network"
 )
