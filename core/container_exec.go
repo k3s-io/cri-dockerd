@@ -20,12 +20,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/Mirantis/cri-dockerd/libdocker"
 	"github.com/Mirantis/cri-dockerd/streaming"
 	"github.com/Mirantis/cri-dockerd/utils"
 	"google.golang.org/grpc/codes"
-	v1 "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
-	"time"
+	v1 "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
 
 // ExecSync executes a command in the container, and returns the stdout output.
@@ -79,4 +80,3 @@ func (ds *dockerService) Exec(
 	}
 	return ds.streamingServer.GetExec(req)
 }
-

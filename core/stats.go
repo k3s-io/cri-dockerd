@@ -18,12 +18,13 @@ package core
 
 import (
 	"context"
-	"github.com/sirupsen/logrus"
 	"sync"
+
+	"github.com/sirupsen/logrus"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
 
 // ContainerStats returns stats for a container stats request based on container id.

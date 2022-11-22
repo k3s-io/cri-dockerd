@@ -19,13 +19,14 @@ package core
 import (
 	"context"
 	"fmt"
+
 	"github.com/Mirantis/cri-dockerd/config"
 	"github.com/Mirantis/cri-dockerd/libdocker"
 	"github.com/Mirantis/cri-dockerd/network/hostport"
 	"github.com/Mirantis/cri-dockerd/store"
 	"github.com/Mirantis/cri-dockerd/streaming"
 	"github.com/sirupsen/logrus"
-	v1 "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+	v1 "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
 
 // portMappingGetter is a wrapper around the dockerService that implements
@@ -146,4 +147,3 @@ func (ds *dockerService) GetPodPortMappings(podSandboxID string) ([]*hostport.Po
 	}
 	return portMappings, nil
 }
-
