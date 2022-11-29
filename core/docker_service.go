@@ -40,6 +40,8 @@ import (
 	"github.com/blang/semver"
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	v1 "k8s.io/api/core/v1"
 	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
@@ -454,16 +456,16 @@ func (ds *dockerService) getDockerVersionFromCache() (*dockertypes.Version, erro
 }
 
 func (ds *dockerService) CheckpointContainer(ctx context.Context, options *runtimeapi.CheckpointContainerRequest) (*runtimeapi.CheckpointContainerResponse, error) {
-	return nil, nil
+	return nil, status.Errorf(codes.Unimplemented, "method CheckpointContainer not implemented")
 }
 func (ds *dockerService) GetContainerEvents(eventReq *runtimeapi.GetEventsRequest, containerEventServer runtimeapi.RuntimeService_GetContainerEventsServer) error {
-	return nil
+	return status.Errorf(codes.Unimplemented, "method GetContainerEvents not implemented")
 }
 
 func (ds *dockerService) ListMetricDescriptors(ctx context.Context, s *runtimeapi.ListMetricDescriptorsRequest) (*runtimeapi.ListMetricDescriptorsResponse, error) {
-	return nil, nil
+	return nil, status.Errorf(codes.Unimplemented, "method ListMetricDescriptors not implemented")
 }
 
 func (ds *dockerService) ListPodSandboxMetrics(ctx context.Context, s *runtimeapi.ListPodSandboxMetricsRequest) (*runtimeapi.ListPodSandboxMetricsResponse, error) {
-	return nil, nil
+	return nil, status.Errorf(codes.Unimplemented, "method ListPodSandboxMetrics not implemented")
 }
