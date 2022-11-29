@@ -18,11 +18,12 @@ package core
 
 import (
 	"context"
+
 	"github.com/Mirantis/cri-dockerd/libdocker"
 	"github.com/Mirantis/cri-dockerd/utils/errors"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
-	v1 "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+	v1 "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
 
 // RemovePodSandbox removes the sandbox. If there are running containers in the
@@ -75,4 +76,3 @@ func (ds *dockerService) RemovePodSandbox(
 	}
 	return nil, errors.NewAggregate(errs)
 }
-

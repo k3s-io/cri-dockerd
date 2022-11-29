@@ -31,7 +31,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
 
 func TestLabelsAndAnnotationsRoundTrip(t *testing.T) {
@@ -336,7 +336,7 @@ func TestGenerateMountBindings(t *testing.T) {
 		"/mnt/7:/var/lib/mysql/7",
 		"/mnt/8:/var/lib/mysql/8:ro,Z,rshared",
 	}
-	result := libdocker.GenerateMountBindings(mounts)
+	result := libdocker.GenerateMountBindings(mounts, "")
 
 	assert.Equal(t, expectedResult, result)
 }

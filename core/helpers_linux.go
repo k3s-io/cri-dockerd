@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 /*
@@ -20,11 +21,12 @@ package core
 
 import (
 	"fmt"
+
 	"github.com/blang/semver"
 	dockertypes "github.com/docker/docker/api/types"
 	dockercontainer "github.com/docker/docker/api/types/container"
 	"github.com/sirupsen/logrus"
-	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
 
 // DefaultMemorySwap always returns 0 for no memory swap in a sandbox

@@ -52,6 +52,8 @@ var (
 
 	// ErrNoAddresses indicates there are no addresses for the hostname
 	ErrNoAddresses = errors.New("no addresses for hostname")
+
+	DisableProxyHostnameCheck = false
 )
 
 // isValidEndpoint checks that the given host / port pair are valid endpoint
@@ -118,6 +120,15 @@ func IsZeroCIDR(cidr string) bool {
 	return false
 }
 
+// IsLoopBack checks if a given IP address is a loopback address.
+func IsLoopBack(ip string) bool {
+	netIP := netutils.ParseIPSloppy(ip)
+	if netIP != nil {
+		return netIP.IsLoopback()
+	}
+	return false
+}
+
 // IsProxyableIP checks if a given IP address is permitted to be proxied
 func IsProxyableIP(ip string) error {
 	netIP := netutils.ParseIPSloppy(ip)
@@ -141,6 +152,10 @@ type Resolver interface {
 
 // IsProxyableHostname checks if the IP addresses for a given hostname are permitted to be proxied
 func IsProxyableHostname(ctx context.Context, resolv Resolver, hostname string) error {
+	if DisableProxyHostnameCheck {
+		return nil
+	}
+
 	resp, err := resolv.LookupIPAddr(ctx, hostname)
 	if err != nil {
 		return err

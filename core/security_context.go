@@ -21,15 +21,16 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
-	"github.com/Mirantis/cri-dockerd/config"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
+	"github.com/Mirantis/cri-dockerd/config"
+
 	dockercontainer "github.com/docker/docker/api/types/container"
 
-	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
 
 	knetwork "github.com/Mirantis/cri-dockerd/network"
 )
@@ -272,7 +273,7 @@ func getSeccompDockerOpts(seccompProfile string) ([]DockerOpt, error) {
 			fname,
 		)
 	}
-	file, err := ioutil.ReadFile(filepath.FromSlash(fname))
+	file, err := os.ReadFile(filepath.FromSlash(fname))
 	if err != nil {
 		return nil, fmt.Errorf("cannot load seccomp profile %q: %v", fname, err)
 	}
