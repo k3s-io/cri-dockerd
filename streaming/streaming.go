@@ -64,7 +64,7 @@ func (r *StreamingRuntime) Exec(
 	tty bool,
 	resize <-chan remotecommand.TerminalSize,
 ) error {
-	return r.ExecWithContext(context.TODO(), containerID, cmd, in, out, err, tty, resize, 0)
+	return r.ExecWithContext(ctx, containerID, cmd, in, out, err, tty, resize, 0)
 }
 
 // ExecWithContext adds a context.
