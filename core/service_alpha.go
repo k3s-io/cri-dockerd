@@ -18,6 +18,7 @@ package core
 
 import (
 	"context"
+
 	"github.com/Mirantis/cri-dockerd/config"
 	"github.com/Mirantis/cri-dockerd/utils"
 	v1 "k8s.io/cri-api/pkg/apis/runtime/v1"
@@ -597,6 +598,48 @@ func (as *dockerServiceAlpha) Version(
 			res = resp
 		}
 		res.RuntimeApiVersion = config.CRIVersionAlpha
+		return res, err
+	}
+	return nil, err
+}
+
+func (as *dockerServiceAlpha) PodSandboxStats(
+	ctx context.Context,
+	r *runtimeapi_alpha.PodSandboxStatsRequest,
+) (res *runtimeapi_alpha.PodSandboxStatsResponse, err error) {
+	var v1Request v1.PodSandboxStatsRequest
+	if err := utils.AlphaReqToV1Req(r, &v1Request); err != nil {
+		return nil, err
+	}
+	var v1Response *v1.PodSandboxStatsResponse
+	v1Response, err = as.ds.PodSandboxStats(ctx, &v1Request)
+	if v1Response != nil {
+		resp := &runtimeapi_alpha.PodSandboxStatsResponse{}
+		err = utils.V1ResponseToAlphaResponse(v1Response, resp)
+		if err == nil {
+			res = resp
+		}
+		return res, err
+	}
+	return nil, err
+}
+
+func (as *dockerServiceAlpha) ListPodSandboxStats(
+	ctx context.Context,
+	r *runtimeapi_alpha.ListPodSandboxStatsRequest,
+) (res *runtimeapi_alpha.ListPodSandboxStatsResponse, err error) {
+	var v1Request v1.ListPodSandboxStatsRequest
+	if err := utils.AlphaReqToV1Req(r, &v1Request); err != nil {
+		return nil, err
+	}
+	var v1Response *v1.ListPodSandboxStatsResponse
+	v1Response, err = as.ds.ListPodSandboxStats(ctx, &v1Request)
+	if v1Response != nil {
+		resp := &runtimeapi_alpha.ListPodSandboxStatsResponse{}
+		err = utils.V1ResponseToAlphaResponse(v1Response, resp)
+		if err == nil {
+			res = resp
+		}
 		return res, err
 	}
 	return nil, err
