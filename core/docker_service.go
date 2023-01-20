@@ -41,6 +41,8 @@ import (
 	"github.com/blang/semver"
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	v1 "k8s.io/api/core/v1"
 	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
@@ -471,4 +473,40 @@ func (ds *dockerService) getDockerVersionFromCache() (*dockertypes.Version, erro
 		return nil, fmt.Errorf("converted to *dockertype.Version error")
 	}
 	return dv, nil
+}
+
+func (ds *dockerService) PodSandboxStats(ctx context.Context, s *runtimeapi.PodSandboxStatsRequest) (*runtimeapi.PodSandboxStatsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PodSandboxStats not implemented")
+}
+
+func (ds *dockerService) ListPodSandboxStats(ctx context.Context, s *runtimeapi.ListPodSandboxStatsRequest) (*runtimeapi.ListPodSandboxStatsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListPodSandboxStats not implemented")
+}
+
+func (ds *dockerService) CheckpointContainer(
+	_ context.Context,
+	r *runtimeapi.CheckpointContainerRequest,
+) (*runtimeapi.CheckpointContainerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CheckpointContainer not implemented")
+}
+
+func (ds *dockerService) GetContainerEvents(
+	r *runtimeapi.GetEventsRequest,
+	s runtimeapi.RuntimeService_GetContainerEventsServer,
+) error {
+	return status.Errorf(codes.Unimplemented, "method GetContainerEvents not implemented")
+}
+
+func (ds *dockerService) ListMetricDescriptors(
+	_ context.Context,
+	req *runtimeapi.ListMetricDescriptorsRequest,
+) (*runtimeapi.ListMetricDescriptorsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListMetricDescriptors not implemented")
+}
+
+func (ds *dockerService) ListPodSandboxMetrics(
+	_ context.Context,
+	req *runtimeapi.ListPodSandboxMetricsRequest,
+) (*runtimeapi.ListPodSandboxMetricsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListPodSandboxMetrics not implemented")
 }
