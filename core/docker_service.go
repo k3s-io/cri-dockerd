@@ -478,3 +478,17 @@ func (ds *dockerService) GetContainerEvents(
 ) error {
 	return status.Errorf(codes.Unimplemented, "method GetContainerEvents not implemented")
 }
+
+func (ds *dockerService) ListMetricDescriptors(
+	_ context.Context,
+	req *runtimeapi.ListMetricDescriptorsRequest,
+) (*runtimeapi.ListMetricDescriptorsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListMetricDescriptors not implemented")
+}
+
+func (ds *dockerService) ListPodSandboxMetrics(
+	_ context.Context,
+	req *runtimeapi.ListPodSandboxMetricsRequest,
+) (*runtimeapi.ListPodSandboxMetricsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListPodSandboxMetrics not implemented")
+}

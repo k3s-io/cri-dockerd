@@ -56,6 +56,7 @@ type ExecHandler interface {
 var _ streaming.Runtime = &StreamingRuntime{}
 
 func (r *StreamingRuntime) Exec(
+	ctx context.Context,
 	containerID string,
 	cmd []string,
 	in io.Reader,
@@ -63,10 +64,10 @@ func (r *StreamingRuntime) Exec(
 	tty bool,
 	resize <-chan remotecommand.TerminalSize,
 ) error {
-	return r.ExecWithContext(context.TODO(), containerID, cmd, in, out, err, tty, resize, 0)
+	return r.ExecWithContext(ctx, containerID, cmd, in, out, err, tty, resize, 0)
 }
 
-// ExecWithContext adds a context.
+// ExecWithContext adds a timeout.
 func (r *StreamingRuntime) ExecWithContext(
 	ctx context.Context,
 	containerID string,
@@ -97,6 +98,7 @@ func (r *StreamingRuntime) ExecWithContext(
 }
 
 func (r *StreamingRuntime) Attach(
+	ctx context.Context,
 	containerID string,
 	in io.Reader,
 	out, errw io.WriteCloser,
@@ -112,6 +114,7 @@ func (r *StreamingRuntime) Attach(
 }
 
 func (r *StreamingRuntime) PortForward(
+	ctx context.Context,
 	podSandboxID string,
 	port int32,
 	stream io.ReadWriteCloser,
