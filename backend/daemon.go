@@ -18,7 +18,6 @@ package backend
 
 import (
 	"fmt"
-	runtimeapi_alpha "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
 	"net"
 	"os"
 	"strings"
@@ -92,10 +91,6 @@ func (s *CriDockerService) Start() error {
 			os.Exit(1)
 		}
 	}()
-
-	as := core.NewDockerServiceAlpha(s.service)
-	runtimeapi_alpha.RegisterRuntimeServiceServer(s.server, as)
-	runtimeapi_alpha.RegisterImageServiceServer(s.server, as)
 
 	handleNotify()
 	return nil

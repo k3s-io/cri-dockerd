@@ -45,7 +45,6 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
-	runtimeapi_alpha "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
 )
 
 const (
@@ -73,12 +72,6 @@ const (
 
 	defaultCgroupDriver = "cgroupfs"
 )
-
-// v1AlphaCRIService provides the interface necessary for cri.v1alpha2
-type v1AlphaCRIService interface {
-	runtimeapi_alpha.RuntimeServiceServer
-	runtimeapi_alpha.ImageServiceServer
-}
 
 // CRIService includes all methods necessary for a CRI backend.
 type CRIService interface {
@@ -284,14 +277,6 @@ type dockerService struct {
 	cleanupInfosLock      sync.RWMutex
 }
 
-type dockerServiceAlpha struct {
-	ds DockerService
-}
-
-func NewDockerServiceAlpha(ds DockerService) v1AlphaCRIService {
-	return &dockerServiceAlpha{ds: ds}
-}
-
 // Version returns the runtime name, runtime version and runtime API version
 func (ds *dockerService) Version(
 	_ context.Context,
@@ -306,23 +291,6 @@ func (ds *dockerService) Version(
 		RuntimeName:       dockerRuntimeName,
 		RuntimeVersion:    v.Version,
 		RuntimeApiVersion: config.CRIVersion,
-	}, nil
-}
-
-// Version returns the runtime name, runtime version and runtime API version
-func (ds *dockerService) AlphaVersion(
-	_ context.Context,
-	r *runtimeapi.VersionRequest,
-) (*runtimeapi_alpha.VersionResponse, error) {
-	v, err := ds.getDockerVersion()
-	if err != nil {
-		return nil, err
-	}
-	return &runtimeapi_alpha.VersionResponse{
-		Version:           kubeAPIVersion,
-		RuntimeName:       dockerRuntimeName,
-		RuntimeVersion:    v.Version,
-		RuntimeApiVersion: config.CRIVersionAlpha,
 	}, nil
 }
 
