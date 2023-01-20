@@ -496,3 +496,17 @@ func (ds *dockerService) PodSandboxStats(ctx context.Context, s *runtimeapi.PodS
 func (ds *dockerService) ListPodSandboxStats(ctx context.Context, s *runtimeapi.ListPodSandboxStatsRequest) (*runtimeapi.ListPodSandboxStatsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListPodSandboxStats not implemented")
 }
+
+func (ds *dockerService) CheckpointContainer(
+	_ context.Context,
+	r *runtimeapi.CheckpointContainerRequest,
+) (*runtimeapi.CheckpointContainerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CheckpointContainer not implemented")
+}
+
+func (ds *dockerService) GetContainerEvents(
+	r *runtimeapi.GetEventsRequest,
+	s runtimeapi.RuntimeService_GetContainerEventsServer,
+) error {
+	return status.Errorf(codes.Unimplemented, "method GetContainerEvents not implemented")
+}
