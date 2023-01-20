@@ -40,6 +40,8 @@ import (
 	"github.com/blang/semver"
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	v1 "k8s.io/api/core/v1"
 	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
@@ -485,4 +487,12 @@ func (ds *dockerService) getDockerVersionFromCache() (*dockertypes.Version, erro
 		return nil, fmt.Errorf("converted to *dockertype.Version error")
 	}
 	return dv, nil
+}
+
+func (ds *dockerService) PodSandboxStats(ctx context.Context, s *runtimeapi.PodSandboxStatsRequest) (*runtimeapi.PodSandboxStatsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PodSandboxStats not implemented")
+}
+
+func (ds *dockerService) ListPodSandboxStats(ctx context.Context, s *runtimeapi.ListPodSandboxStatsRequest) (*runtimeapi.ListPodSandboxStatsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListPodSandboxStats not implemented")
 }
