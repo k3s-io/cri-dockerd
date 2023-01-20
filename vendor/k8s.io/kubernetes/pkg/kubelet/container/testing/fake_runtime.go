@@ -28,7 +28,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/flowcontrol"
-	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
+	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
 	kubecontainer "k8s.io/kubernetes/pkg/kubelet/container"
 	"k8s.io/kubernetes/pkg/volume"
 )
@@ -177,10 +177,6 @@ func (f *FakeRuntime) AssertKilledContainers(containers []string) bool {
 
 func (f *FakeRuntime) Type() string {
 	return f.RuntimeType
-}
-
-func (f *FakeRuntime) SupportsSingleFileMapping() bool {
-	return true
 }
 
 func (f *FakeRuntime) Version() (kubecontainer.Version, error) {
@@ -363,6 +359,14 @@ func (f *FakeRuntime) DeleteContainer(containerID kubecontainer.ContainerID) err
 	defer f.Unlock()
 
 	f.CalledFunctions = append(f.CalledFunctions, "DeleteContainer")
+	return f.Err
+}
+
+func (f *FakeRuntime) CheckpointContainer(options *runtimeapi.CheckpointContainerRequest) error {
+	f.Lock()
+	defer f.Unlock()
+
+	f.CalledFunctions = append(f.CalledFunctions, "CheckpointContainer")
 	return f.Err
 }
 
