@@ -150,7 +150,7 @@ func newBaseEndpointInfo(IP, nodeName, zone string, port int, isLocal bool,
 	}
 }
 
-type makeEndpointFunc func(info *BaseEndpointInfo) Endpoint
+type makeEndpointFunc func(info *BaseEndpointInfo, svcPortName *ServicePortName) Endpoint
 
 // This handler is invoked by the apply function on every change. This function should not modify the
 // EndpointsMap's but just use the changes for any Proxier specific cleanup.
@@ -202,8 +202,10 @@ func NewEndpointChangeTracker(hostname string, makeEndpointInfo makeEndpointFunc
 // if items changed, otherwise return false.  Update can be used to add/update/delete items of EndpointsChangeMap.  For example,
 // Add item
 //   - pass <nil, endpoints> as the <previous, current> pair.
+//
 // Update item
 //   - pass <oldEndpoints, endpoints> as the <previous, current> pair.
+//
 // Delete item
 //   - pass <endpoints, nil> as the <previous, current> pair.
 func (ect *EndpointChangeTracker) Update(previous, current *v1.Endpoints) bool {
@@ -248,7 +250,7 @@ func (ect *EndpointChangeTracker) Update(previous, current *v1.Endpoints) bool {
 		delete(ect.lastChangeTriggerTimes, namespacedName)
 	} else {
 		for spn, eps := range change.current {
-			klog.V(2).Infof("Service port %s updated: %d endpoints", spn, len(eps))
+			klog.V(2).InfoS("Service port endpoints update", "servicePort", spn, "endpoints", len(eps))
 		}
 	}
 
@@ -261,19 +263,19 @@ func (ect *EndpointChangeTracker) Update(previous, current *v1.Endpoints) bool {
 // If removeSlice is true, slice will be removed, otherwise it will be added or updated.
 func (ect *EndpointChangeTracker) EndpointSliceUpdate(endpointSlice *discovery.EndpointSlice, removeSlice bool) bool {
 	if !supportedEndpointSliceAddressTypes.Has(string(endpointSlice.AddressType)) {
-		klog.V(4).Infof("EndpointSlice address type not supported by kube-proxy: %s", endpointSlice.AddressType)
+		klog.V(4).InfoS("EndpointSlice address type not supported by kube-proxy", "addressType", endpointSlice.AddressType)
 		return false
 	}
 
 	// This should never happen
 	if endpointSlice == nil {
-		klog.Error("Nil endpointSlice passed to EndpointSliceUpdate")
+		klog.ErrorS(nil, "Nil endpointSlice passed to EndpointSliceUpdate")
 		return false
 	}
 
 	namespacedName, _, err := endpointSliceCacheKeys(endpointSlice)
 	if err != nil {
-		klog.Warningf("Error getting endpoint slice cache keys: %v", err)
+		klog.InfoS("Error getting endpoint slice cache keys", "err", err)
 		return false
 	}
 
@@ -298,6 +300,24 @@ func (ect *EndpointChangeTracker) EndpointSliceUpdate(endpointSlice *discovery.E
 	}
 
 	return changeNeeded
+}
+
+// PendingChanges returns a set whose keys are the names of the services whose endpoints
+// have changed since the last time ect was used to update an EndpointsMap. (You must call
+// this _before_ calling em.Update(ect).)
+func (ect *EndpointChangeTracker) PendingChanges() sets.String {
+	if ect.endpointSliceCache != nil {
+		return ect.endpointSliceCache.pendingChanges()
+	}
+
+	ect.lock.Lock()
+	defer ect.lock.Unlock()
+
+	changes := sets.NewString()
+	for name := range ect.items {
+		changes.Insert(name.String())
+	}
+	return changes
 }
 
 // checkoutChanges returns a list of pending endpointsChanges and marks them as
@@ -351,8 +371,8 @@ func getLastChangeTriggerTime(annotations map[string]string) time.Time {
 	}
 	val, err := time.Parse(time.RFC3339Nano, annotations[v1.EndpointsLastChangeTriggerTime])
 	if err != nil {
-		klog.Warningf("Error while parsing EndpointsLastChangeTriggerTimeAnnotation: '%s'. Error is %v",
-			annotations[v1.EndpointsLastChangeTriggerTime], err)
+		klog.ErrorS(err, "Error while parsing EndpointsLastChangeTriggerTimeAnnotation",
+			"value", annotations[v1.EndpointsLastChangeTriggerTime])
 		// In case of error val = time.Zero, which is ignored in the upstream code.
 	}
 	return val
@@ -421,7 +441,7 @@ func (ect *EndpointChangeTracker) endpointsToEndpointsMap(endpoints *v1.Endpoint
 		for i := range ss.Ports {
 			port := &ss.Ports[i]
 			if port.Port == 0 {
-				klog.Warningf("ignoring invalid endpoint port %s", port.Name)
+				klog.ErrorS(nil, "Ignoring invalid endpoint port", "portName", port.Name)
 				continue
 			}
 			svcPortName := ServicePortName{
@@ -432,7 +452,7 @@ func (ect *EndpointChangeTracker) endpointsToEndpointsMap(endpoints *v1.Endpoint
 			for i := range ss.Addresses {
 				addr := &ss.Addresses[i]
 				if addr.IP == "" {
-					klog.Warningf("ignoring invalid endpoint port %s with empty host", port.Name)
+					klog.ErrorS(nil, "Ignoring invalid endpoint port with empty host", "portName", port.Name)
 					continue
 				}
 
@@ -462,13 +482,13 @@ func (ect *EndpointChangeTracker) endpointsToEndpointsMap(endpoints *v1.Endpoint
 				// Zone information is only supported with EndpointSlice API
 				baseEndpointInfo := newBaseEndpointInfo(addr.IP, nodeName, "", int(port.Port), isLocal, isReady, isServing, isTerminating, zoneHints)
 				if ect.makeEndpointInfo != nil {
-					endpointsMap[svcPortName] = append(endpointsMap[svcPortName], ect.makeEndpointInfo(baseEndpointInfo))
+					endpointsMap[svcPortName] = append(endpointsMap[svcPortName], ect.makeEndpointInfo(baseEndpointInfo, &svcPortName))
 				} else {
 					endpointsMap[svcPortName] = append(endpointsMap[svcPortName], baseEndpointInfo)
 				}
 			}
 
-			klog.V(3).Infof("Setting endpoints for %q to %+v", svcPortName, formatEndpointsList(endpointsMap[svcPortName]))
+			klog.V(3).InfoS("Setting endpoints for service port", "portName", svcPortName, "endpoints", formatEndpointsList(endpointsMap[svcPortName]))
 		}
 	}
 	return endpointsMap
@@ -561,7 +581,7 @@ func detectStaleConnections(oldEndpointsMap, newEndpointsMap EndpointsMap, stale
 				}
 			}
 			if stale {
-				klog.V(4).Infof("Stale endpoint %v -> %v", svcPortName, ep.String())
+				klog.V(4).InfoS("Stale endpoint", "portName", svcPortName, "endpoint", ep)
 				*staleEndpoints = append(*staleEndpoints, ServiceEndpoint{Endpoint: ep.String(), ServicePortName: svcPortName})
 			}
 		}

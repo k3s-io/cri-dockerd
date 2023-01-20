@@ -23,10 +23,10 @@ import (
 	"time"
 
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/clock"
 	"k8s.io/client-go/tools/events"
 	"k8s.io/klog/v2"
 	api "k8s.io/kubernetes/pkg/apis/core"
+	"k8s.io/utils/clock"
 )
 
 // ProxierHealthUpdater allows callers to update healthz timestamp only.
@@ -44,6 +44,7 @@ type ProxierHealthUpdater interface {
 }
 
 var _ ProxierHealthUpdater = &proxierHealthServer{}
+var zeroTime = time.Time{}
 
 // proxierHealthServer returns 200 "OK" by default. It verifies that the delay between
 // QueuedUpdate() calls and Updated() calls never exceeds healthTimeout.
@@ -57,8 +58,8 @@ type proxierHealthServer struct {
 	recorder      events.EventRecorder
 	nodeRef       *v1.ObjectReference
 
-	lastUpdated atomic.Value
-	lastQueued  atomic.Value
+	lastUpdated         atomic.Value
+	oldestPendingQueued atomic.Value
 }
 
 // NewProxierHealthServer returns a proxier health http server.
@@ -78,14 +79,19 @@ func newProxierHealthServer(listener listener, httpServerFactory httpServerFacto
 	}
 }
 
-// Updated updates the lastUpdated timestamp.
+// Updated indicates that kube-proxy has successfully updated its backend, so it should
+// be considered healthy now.
 func (hs *proxierHealthServer) Updated() {
+	hs.oldestPendingQueued.Store(zeroTime)
 	hs.lastUpdated.Store(hs.clock.Now())
 }
 
-// QueuedUpdate updates the lastQueued timestamp.
+// QueuedUpdate indicates that the proxy has received changes from the apiserver but
+// has not yet pushed them to its backend. If the proxy does not call Updated within the
+// healthTimeout time then it will be considered unhealthy.
 func (hs *proxierHealthServer) QueuedUpdate() {
-	hs.lastQueued.Store(hs.clock.Now())
+	// Set oldestPendingQueued only if it's currently zero
+	hs.oldestPendingQueued.CompareAndSwap(zeroTime, hs.clock.Now())
 }
 
 // Run starts the healthz HTTP server and blocks until it exits.
@@ -104,7 +110,7 @@ func (hs *proxierHealthServer) Run() error {
 		return fmt.Errorf("%v", msg)
 	}
 
-	klog.V(3).Infof("starting healthz on %s", hs.addr)
+	klog.V(3).InfoS("Starting healthz HTTP server", "address", hs.addr)
 
 	if err := server.Serve(listener); err != nil {
 		return fmt.Errorf("proxier healthz closed with error: %v", err)
@@ -117,9 +123,9 @@ type healthzHandler struct {
 }
 
 func (h healthzHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
-	var lastQueued, lastUpdated time.Time
-	if val := h.hs.lastQueued.Load(); val != nil {
-		lastQueued = val.(time.Time)
+	var oldestPendingQueued, lastUpdated time.Time
+	if val := h.hs.oldestPendingQueued.Load(); val != nil {
+		oldestPendingQueued = val.(time.Time)
 	}
 	if val := h.hs.lastUpdated.Load(); val != nil {
 		lastUpdated = val.(time.Time)
@@ -128,15 +134,11 @@ func (h healthzHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 
 	healthy := false
 	switch {
-	case lastUpdated.IsZero():
+	case oldestPendingQueued.IsZero():
 		// The proxy is healthy while it's starting up
-		// TODO: this makes it useless as a readinessProbe. Consider changing
-		// to only become healthy after the proxy is fully synced.
+		// or the proxy is fully synced.
 		healthy = true
-	case lastUpdated.After(lastQueued):
-		// We've processed all updates
-		healthy = true
-	case currentTime.Sub(lastQueued) < h.hs.healthTimeout:
+	case currentTime.Sub(oldestPendingQueued) < h.hs.healthTimeout:
 		// There's an unprocessed update queued, but it's not late yet
 		healthy = true
 	}
@@ -147,14 +149,12 @@ func (h healthzHandler) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 		resp.WriteHeader(http.StatusServiceUnavailable)
 	} else {
 		resp.WriteHeader(http.StatusOK)
-
 		// In older releases, the returned "lastUpdated" time indicated the last
 		// time the proxier sync loop ran, even if nothing had changed. To
 		// preserve compatibility, we use the same semantics: the returned
 		// lastUpdated value is "recent" if the server is healthy. The kube-proxy
 		// metrics provide more detailed information.
 		lastUpdated = currentTime
-
 	}
 	fmt.Fprintf(resp, `{"lastUpdated": %q,"currentTime": %q}`, lastUpdated, currentTime)
 }
