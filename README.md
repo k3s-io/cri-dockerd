@@ -4,6 +4,26 @@ This adapter provides a shim for [Docker Engine](https://docs.docker.com/engine/
 that lets you control Docker via the
 Kubernetes [Container Runtime Interface](https://github.com/kubernetes/cri-api#readme).
 
+## k3s-io/k3s
+
+The fork you are currently viewing is maintained by the K3s project. It contains changes to allow
+cri-dockerd to be embedded alongside more recent Kubernetes versions, and adds basic compatibility
+with newer releases of the CRI-API than offered by upstream. There is one branch per Kubernetes
+minor version.
+
+The first divergence point on this branch is an `Update Kubernetes to v1.X.Y` commit. Following that
+are a set of patches to fix incompatibilities and add/change/remove APIs to track with CRI-API in
+the new Kubernetes version. May also be a few minor commits to fix issues not yet addressed by
+upstream.
+
+When updating this fork, all commits starting with the `Update Kubernetes` commit should be rebased
+on to the latest master branch or release tag, and each rebased commit fixed to apply cleanly. Note
+that `go mod tidy` and `go mod vendor` may not run cleanly until all patches have been applied.
+
+When updating the Kubernetes version, the initial commit should be edited and amended to update and
+vendor in the new patch release. This should not generally be necessary, unless Kubernetes makes
+changes to CRI-API midway through a minor release again.
+
 ## IMPORTANT
 
 For users running `0.2.5` or above, the default network plugin is `cni`. Kubernetes 1.24+ has removed `kubenet` and
