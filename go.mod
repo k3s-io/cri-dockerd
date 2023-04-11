@@ -26,14 +26,13 @@ require (
 	golang.org/x/sync v0.14.0
 	golang.org/x/sys v0.33.0
 	google.golang.org/grpc v1.62.0
-	k8s.io/api v0.29.15
-	k8s.io/apimachinery v0.29.15
-	k8s.io/apiserver v0.29.15
-	k8s.io/client-go v0.29.15
-	k8s.io/component-base v0.29.15
-	k8s.io/component-helpers v0.29.15
-	k8s.io/cri-api v0.29.15
-	k8s.io/cri-api/v1alpha2 v0.29.15
+	k8s.io/api v0.29.10
+	k8s.io/apimachinery v0.29.10
+	k8s.io/apiserver v0.29.10
+	k8s.io/client-go v0.29.10
+	k8s.io/component-base v0.29.10
+	k8s.io/component-helpers v0.29.10
+	k8s.io/cri-api v0.29.10
 	k8s.io/kubelet v0.0.0
 	k8s.io/kubernetes v1.29.15
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
