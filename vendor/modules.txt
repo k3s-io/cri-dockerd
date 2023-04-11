@@ -1211,7 +1211,6 @@ k8s.io/kubernetes/pkg/kubelet/util
 k8s.io/kubernetes/pkg/kubelet/winstats
 k8s.io/kubernetes/pkg/proxy/util
 k8s.io/kubernetes/pkg/securitycontext
-k8s.io/kubernetes/pkg/util/bandwidth
 k8s.io/kubernetes/pkg/util/conntrack
 k8s.io/kubernetes/pkg/util/hash
 k8s.io/kubernetes/pkg/util/iptables
