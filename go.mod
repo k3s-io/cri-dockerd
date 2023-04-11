@@ -33,7 +33,6 @@ require (
 	k8s.io/component-base v0.27.8
 	k8s.io/component-helpers v0.27.8
 	k8s.io/cri-api v0.27.8
-	k8s.io/cri-api/v1alpha2 v0.25.8
 	k8s.io/kubernetes v1.27.8
 	k8s.io/utils v0.0.0-20230209194617-a36077c30491
 )
