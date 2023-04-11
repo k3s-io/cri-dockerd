@@ -66,7 +66,6 @@ func NewHostportManager(iptables utiliptables.Interface) HostPortManager {
 		iptables:    iptables,
 		portOpener:  openLocalPort,
 	}
-
 	_, err := h.execer.LookPath("conntrack")
 	if err != nil {
 		logrus.Info(
