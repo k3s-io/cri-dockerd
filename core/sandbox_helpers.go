@@ -18,17 +18,19 @@ package core
 
 import (
 	"fmt"
-	"github.com/Mirantis/cri-dockerd/libdocker"
-	"github.com/Mirantis/cri-dockerd/utils"
-	"github.com/Mirantis/cri-dockerd/utils/errors"
-	"k8s.io/kubernetes/pkg/credentialprovider"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/Mirantis/cri-dockerd/libdocker"
+	"github.com/Mirantis/cri-dockerd/utils"
+	"github.com/Mirantis/cri-dockerd/utils/errors"
+	"k8s.io/kubernetes/pkg/credentialprovider"
+
 	"github.com/Mirantis/cri-dockerd/config"
 	dockertypes "github.com/docker/docker/api/types"
 	dockercontainer "github.com/docker/docker/api/types/container"
+	dockerregistry "github.com/docker/docker/api/types/registry"
 	"github.com/sirupsen/logrus"
 	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
@@ -421,7 +423,7 @@ func ensureSandboxImageExists(client libdocker.DockerClientInterface, image stri
 	if !withCredentials {
 		logrus.Infof("Pulling the image without credentials. Image: %v", image)
 
-		err := client.PullImage(image, dockertypes.AuthConfig{}, dockertypes.ImagePullOptions{})
+		err := client.PullImage(image, dockerregistry.AuthConfig{}, dockertypes.ImagePullOptions{})
 		if err != nil {
 			return fmt.Errorf("failed pulling image %q: %v", image, err)
 		}
@@ -431,7 +433,7 @@ func ensureSandboxImageExists(client libdocker.DockerClientInterface, image stri
 
 	var pullErrs []error
 	for _, currentCreds := range creds {
-		authConfig := dockertypes.AuthConfig(currentCreds)
+		authConfig := dockerregistry.AuthConfig(currentCreds)
 		err := client.PullImage(image, authConfig, dockertypes.ImagePullOptions{})
 		// If there was no error, return success
 		if err == nil {

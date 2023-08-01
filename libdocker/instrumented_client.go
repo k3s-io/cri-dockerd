@@ -22,6 +22,7 @@ import (
 	dockertypes "github.com/docker/docker/api/types"
 	dockercontainer "github.com/docker/docker/api/types/container"
 	dockerimagetypes "github.com/docker/docker/api/types/image"
+	dockerregistry "github.com/docker/docker/api/types/registry"
 
 	"github.com/Mirantis/cri-dockerd/metrics"
 )
@@ -175,7 +176,7 @@ func (in instrumentedInterface) ListImages(
 
 func (in instrumentedInterface) PullImage(
 	imageID string,
-	auth dockertypes.AuthConfig,
+	auth dockerregistry.AuthConfig,
 	opts dockertypes.ImagePullOptions,
 ) error {
 	const operation = "pull_image"
