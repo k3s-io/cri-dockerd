@@ -142,6 +142,7 @@ require (
 )
 
 replace (
+	github.com/docker/docker => github.com/docker/docker v24.0.0-rc.2.0.20230801142700-69c9adb7d386+incompatible
 	k8s.io/api => github.com/k3s-io/kubernetes/staging/src/k8s.io/api v1.27.0-k3s1
 	k8s.io/apiextensions-apiserver => github.com/k3s-io/kubernetes/staging/src/k8s.io/apiextensions-apiserver v1.27.0-k3s1
 	k8s.io/apimachinery => github.com/k3s-io/kubernetes/staging/src/k8s.io/apimachinery v1.27.0-k3s1

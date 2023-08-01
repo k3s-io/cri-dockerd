@@ -33,14 +33,15 @@ import (
 	dockertypes "github.com/docker/docker/api/types"
 	dockercontainer "github.com/docker/docker/api/types/container"
 	dockerimagetypes "github.com/docker/docker/api/types/image"
+	dockerregistry "github.com/docker/docker/api/types/registry"
 	dockerapi "github.com/docker/docker/client"
 	dockermessage "github.com/docker/docker/pkg/jsonmessage"
 	dockerstdcopy "github.com/docker/docker/pkg/stdcopy"
 )
 
 // kubeDockerClient is a wrapped layer of docker client for kubelet internal use. This layer is added to:
-//	1) Redirect stream for exec and attach operations.
-//	2) Wrap the context in this layer to make the DockerClientInterface cleaner.
+//  1. Redirect stream for exec and attach operations.
+//  2. Wrap the context in this layer to make the DockerClientInterface cleaner.
 type kubeDockerClient struct {
 	// timeout is the timeout of short running docker operations.
 	timeout time.Duration
@@ -142,7 +143,7 @@ func (d *kubeDockerClient) InspectContainerWithSize(id string) (*dockertypes.Con
 
 func (d *kubeDockerClient) CreateContainer(
 	opts dockertypes.ContainerCreateConfig,
-) (*dockercontainer.ContainerCreateCreatedBody, error) {
+) (*dockercontainer.CreateResponse, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), d.timeout)
 	defer cancel()
 	// we provide an explicit default shm size as to not depend on docker daemon.
@@ -283,7 +284,7 @@ func (d *kubeDockerClient) ListImages(
 	return images, nil
 }
 
-func base64EncodeAuth(auth dockertypes.AuthConfig) (string, error) {
+func base64EncodeAuth(auth dockerregistry.AuthConfig) (string, error) {
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(auth); err != nil {
 		return "", err
@@ -394,7 +395,7 @@ func (p *progressReporter) stop() {
 
 func (d *kubeDockerClient) PullImage(
 	image string,
-	auth dockertypes.AuthConfig,
+	auth dockerregistry.AuthConfig,
 	opts dockertypes.ImagePullOptions,
 ) error {
 	// RegistryAuth is the base64 encoded credentials for the registry
