@@ -521,3 +521,7 @@ func (ds *dockerService) ListPodSandboxMetrics(
 ) (*runtimeapi.ListPodSandboxMetricsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListPodSandboxMetrics not implemented")
 }
+
+func (ds *dockerService) RuntimeConfig(ctx context.Context, r *runtimeapi.RuntimeConfigRequest) (res *runtimeapi.RuntimeConfigResponse, err error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RuntimeConfig not implemented")
+}
