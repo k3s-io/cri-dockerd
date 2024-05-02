@@ -1,3 +1,6 @@
+//go:build linux
+// +build linux1
+
 /*
 Copyright 2021 Mirantis
 
