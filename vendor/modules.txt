@@ -115,11 +115,12 @@ github.com/distribution/reference
 # github.com/docker/distribution v2.8.3+incompatible
 ## explicit
 github.com/docker/distribution/reference
-# github.com/docker/docker v24.0.9+incompatible
+# github.com/docker/docker v25.0.6+incompatible
 ## explicit
 github.com/docker/docker/api
 github.com/docker/docker/api/types
 github.com/docker/docker/api/types/blkiodev
+github.com/docker/docker/api/types/checkpoint
 github.com/docker/docker/api/types/container
 github.com/docker/docker/api/types/events
 github.com/docker/docker/api/types/filters
@@ -130,11 +131,14 @@ github.com/docker/docker/api/types/registry
 github.com/docker/docker/api/types/strslice
 github.com/docker/docker/api/types/swarm
 github.com/docker/docker/api/types/swarm/runtime
+github.com/docker/docker/api/types/system
 github.com/docker/docker/api/types/time
 github.com/docker/docker/api/types/versions
 github.com/docker/docker/api/types/volume
 github.com/docker/docker/client
 github.com/docker/docker/errdefs
+github.com/docker/docker/image/spec/specs-go/v1
+github.com/docker/docker/internal/multierror
 github.com/docker/docker/pkg/jsonmessage
 github.com/docker/docker/pkg/stdcopy
 # github.com/docker/go-connections v0.5.0
@@ -459,6 +463,8 @@ go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal
 go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/envconfig
 go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/otlpconfig
 go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc/internal/retry
+# go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.27.0
+## explicit; go 1.21
 # go.opentelemetry.io/otel/metric v1.28.0
 ## explicit; go 1.21
 go.opentelemetry.io/otel/metric
@@ -1297,7 +1303,6 @@ k8s.io/component-base/logs
 k8s.io/component-base/logs/api/v1
 k8s.io/component-base/logs/internal/setverbositylevel
 k8s.io/component-base/logs/klogflags
-k8s.io/component-base/logs/logreduction
 k8s.io/component-base/metrics
 k8s.io/component-base/metrics/features
 k8s.io/component-base/metrics/legacyregistry
@@ -1315,13 +1320,9 @@ k8s.io/component-helpers/node/util/sysctl
 k8s.io/component-helpers/node/util/sysctl/testing
 # k8s.io/cri-api v0.31.0 => k8s.io/cri-api v0.31.0
 ## explicit; go 1.22.0
-k8s.io/cri-api/pkg/apis
 k8s.io/cri-api/pkg/apis/runtime/v1
 # k8s.io/cri-client v0.31.0
 ## explicit; go 1.22.0
-k8s.io/cri-client/pkg
-k8s.io/cri-client/pkg/internal
-k8s.io/cri-client/pkg/logs
 k8s.io/cri-client/pkg/util
 # k8s.io/klog/v2 v2.130.1
 ## explicit; go 1.18
@@ -1360,6 +1361,7 @@ k8s.io/kube-openapi/pkg/validation/strfmt/bson
 k8s.io/kubelet/pkg/cri/streaming
 k8s.io/kubelet/pkg/cri/streaming/portforward
 k8s.io/kubelet/pkg/cri/streaming/remotecommand
+k8s.io/kubelet/pkg/types
 # k8s.io/kubernetes v1.31.0
 ## explicit; go 1.22.0
 k8s.io/kubernetes/pkg/api/legacyscheme
@@ -1368,17 +1370,13 @@ k8s.io/kubernetes/pkg/api/v1/service
 k8s.io/kubernetes/pkg/apis/core
 k8s.io/kubernetes/pkg/apis/core/helper
 k8s.io/kubernetes/pkg/apis/core/v1/helper
-k8s.io/kubernetes/pkg/apis/scheduling
 k8s.io/kubernetes/pkg/credentialprovider
 k8s.io/kubernetes/pkg/features
 k8s.io/kubernetes/pkg/kubelet/apis/config
 k8s.io/kubernetes/pkg/kubelet/cm/util
 k8s.io/kubernetes/pkg/kubelet/container
 k8s.io/kubernetes/pkg/kubelet/container/testing
-k8s.io/kubernetes/pkg/kubelet/metrics
 k8s.io/kubernetes/pkg/kubelet/server/metrics
-k8s.io/kubernetes/pkg/kubelet/types
-k8s.io/kubernetes/pkg/kubelet/util
 k8s.io/kubernetes/pkg/kubelet/winstats
 k8s.io/kubernetes/pkg/proxy
 k8s.io/kubernetes/pkg/proxy/apis/config

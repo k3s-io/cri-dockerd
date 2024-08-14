@@ -19,11 +19,12 @@ package libdocker
 import (
 	"time"
 
+	containerconfig "github.com/Mirantis/cri-dockerd/config/container"
+	"github.com/Mirantis/cri-dockerd/metrics"
 	dockertypes "github.com/docker/docker/api/types"
 	dockercontainer "github.com/docker/docker/api/types/container"
 	dockerimagetypes "github.com/docker/docker/api/types/image"
-
-	"github.com/Mirantis/cri-dockerd/metrics"
+	"github.com/docker/docker/api/types/registry"
 )
 
 // instrumentedInterface wraps the DockerClientInterface and records the operations
@@ -92,7 +93,7 @@ func (in instrumentedInterface) InspectContainerWithSize(
 }
 
 func (in instrumentedInterface) CreateContainer(
-	opts dockertypes.ContainerCreateConfig,
+	opts containerconfig.CreateConfigWrapper,
 ) (*dockercontainer.CreateResponse, error) {
 	const operation = "create_container"
 	defer recordOperation(operation, time.Now())
@@ -175,7 +176,7 @@ func (in instrumentedInterface) ListImages(
 
 func (in instrumentedInterface) PullImage(
 	imageID string,
-	auth dockertypes.AuthConfig,
+	auth registry.AuthConfig,
 	opts dockertypes.ImagePullOptions,
 ) error {
 	const operation = "pull_image"

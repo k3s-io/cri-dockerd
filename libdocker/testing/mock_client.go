@@ -8,10 +8,12 @@ import (
 	reflect "reflect"
 	time "time"
 
+	containerconfig "github.com/Mirantis/cri-dockerd/config/container"
 	libdocker "github.com/Mirantis/cri-dockerd/libdocker"
 	types "github.com/docker/docker/api/types"
 	container "github.com/docker/docker/api/types/container"
 	image "github.com/docker/docker/api/types/image"
+	"github.com/docker/docker/api/types/registry"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -53,7 +55,7 @@ func (mr *MockDockerClientInterfaceMockRecorder) AttachToContainer(arg0, arg1, a
 }
 
 // CreateContainer mocks base method.
-func (m *MockDockerClientInterface) CreateContainer(arg0 types.ContainerCreateConfig) (*container.CreateResponse, error) {
+func (m *MockDockerClientInterface) CreateContainer(arg0 containerconfig.CreateConfigWrapper) (*container.CreateResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateContainer", arg0)
 	ret0, _ := ret[0].(*container.CreateResponse)
@@ -247,7 +249,7 @@ func (mr *MockDockerClientInterfaceMockRecorder) Logs(arg0, arg1, arg2 interface
 }
 
 // PullImage mocks base method.
-func (m *MockDockerClientInterface) PullImage(image string, auth types.AuthConfig, opts types.ImagePullOptions) error {
+func (m *MockDockerClientInterface) PullImage(image string, auth registry.AuthConfig, opts types.ImagePullOptions) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PullImage", image, auth, opts)
 	ret0, _ := ret[0].(error)

@@ -26,6 +26,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Mirantis/cri-dockerd/libdocker"
 	"github.com/opencontainers/runc/libcontainer/cgroups"
 	cgroupfs "github.com/opencontainers/runc/libcontainer/cgroups/fs"
 	cgroupfs2 "github.com/opencontainers/runc/libcontainer/cgroups/fs2"
@@ -35,8 +36,6 @@ import (
 	"github.com/sirupsen/logrus"
 	utilversion "k8s.io/apimachinery/pkg/util/version"
 	"k8s.io/apimachinery/pkg/util/wait"
-
-	"github.com/Mirantis/cri-dockerd/libdocker"
 )
 
 const (
