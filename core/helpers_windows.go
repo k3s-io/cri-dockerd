@@ -23,11 +23,13 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"golang.org/x/sys/windows/registry"
 	"os"
 	"regexp"
 	"runtime"
 
+	"golang.org/x/sys/windows/registry"
+
+	containerconfig "github.com/Mirantis/cri-dockerd/config/container"
 	"github.com/blang/semver"
 	dockertypes "github.com/docker/docker/api/types"
 	dockercontainer "github.com/docker/docker/api/types/container"
@@ -42,7 +44,7 @@ func DefaultMemorySwap() int64 {
 }
 
 func (ds *dockerService) updateCreateConfig(
-	createConfig *dockertypes.ContainerCreateConfig,
+	createConfig *containerconfig.CreateConfigWrapper,
 	config *runtimeapi.ContainerConfig,
 	sandboxConfig *runtimeapi.PodSandboxConfig,
 	podSandboxID string, securityOptSep rune, apiVersion *semver.Version) error {
@@ -152,7 +154,7 @@ type containerCleanupInfo struct {
 // after either the container creation has failed or the container has been removed.
 func (ds *dockerService) applyPlatformSpecificDockerConfig(
 	request *runtimeapi.CreateContainerRequest,
-	createConfig *dockertypes.ContainerCreateConfig,
+	createConfig *containerconfig.CreateConfigWrapper,
 ) (*containerCleanupInfo, error) {
 	cleanupInfo := &containerCleanupInfo{}
 
@@ -173,7 +175,7 @@ func (ds *dockerService) applyPlatformSpecificDockerConfig(
 // https://github.com/moby/moby/pull/38777
 func applyGMSAConfig(
 	config *runtimeapi.ContainerConfig,
-	createConfig *dockertypes.ContainerCreateConfig,
+	createConfig *containerconfig.CreateConfigWrapper,
 	cleanupInfo *containerCleanupInfo,
 ) error {
 	var credSpec string
