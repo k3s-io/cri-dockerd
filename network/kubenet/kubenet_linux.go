@@ -95,7 +95,7 @@ type kubenetNetworkPlugin struct {
 	loConfig          *libcni.NetworkConfig
 	cniConfig         libcni.CNI
 	bandwidthShaper   bandwidth.Shaper
-	mu                sync.Mutex //Mutex for protecting podIPs map, netConfig, and shaper initialization
+	mu                sync.Mutex // Mutex for protecting podIPs map, netConfig, and shaper initialization
 	podIPs            map[config.ContainerID]utilsets.String
 	mtu               int
 	execer            utilexec.Interface
@@ -116,9 +116,8 @@ type kubenetNetworkPlugin struct {
 }
 
 func NewPlugin(networkPluginDirs []string, cacheDir string) network.NetworkPlugin {
-	execer := utilexec.New()
-	iptInterface := utiliptables.New(execer, utiliptables.ProtocolIPv4)
-	iptInterfacev6 := utiliptables.New(execer, utiliptables.ProtocolIPv6)
+	iptInterface := utiliptables.New(utiliptables.ProtocolIPv4)
+	iptInterfacev6 := utiliptables.New(utiliptables.ProtocolIPv6)
 	return &kubenetNetworkPlugin{
 		podIPs:            make(map[config.ContainerID]utilsets.String),
 		execer:            utilexec.New(),
@@ -286,7 +285,7 @@ func (plugin *kubenetNetworkPlugin) Event(name string, details map[string]interf
 		plugin.podCIDRs = append(plugin.podCIDRs, cidr)
 	}
 
-	//setup hairpinMode
+	// setup hairpinMode
 	setHairpin := plugin.hairpinMode == config.HairpinVeth
 
 	json := fmt.Sprintf(
@@ -522,7 +521,6 @@ func (plugin *kubenetNetworkPlugin) SetUpPod(
 	id config.ContainerID,
 	annotations, options map[string]string,
 ) error {
-
 	if err := plugin.Status(); err != nil {
 		return fmt.Errorf("kubenet cannot SetUpPod: %v", err)
 	}
