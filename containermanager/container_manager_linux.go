@@ -26,9 +26,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/opencontainers/runc/libcontainer/cgroups"
-	cgroupfs "github.com/opencontainers/runc/libcontainer/cgroups/fs"
-	cgroupfs2 "github.com/opencontainers/runc/libcontainer/cgroups/fs2"
+	"github.com/opencontainers/cgroups"
+	cgroupfs "github.com/opencontainers/cgroups/fs"
+	cgroupfs2 "github.com/opencontainers/cgroups/fs2"
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/devices"
 	"github.com/pkg/errors"

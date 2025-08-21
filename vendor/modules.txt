@@ -103,9 +103,6 @@ github.com/davecgh/go-spew/spew
 # github.com/distribution/reference v0.6.0 => github.com/distribution/reference v0.5.0
 ## explicit; go 1.20
 github.com/distribution/reference
-# github.com/docker/distribution v2.8.3+incompatible
-## explicit
-github.com/docker/distribution/reference
 # github.com/docker/docker v26.1.4+incompatible => github.com/docker/docker v25.0.6+incompatible
 ## explicit
 github.com/docker/docker/api
@@ -301,6 +298,10 @@ github.com/mxk/go-flowrate/flowrate
 ## explicit; go 1.23.0
 github.com/opencontainers/cgroups
 github.com/opencontainers/cgroups/devices/config
+github.com/opencontainers/cgroups/fs
+github.com/opencontainers/cgroups/fs2
+github.com/opencontainers/cgroups/fscommon
+github.com/opencontainers/cgroups/internal/path
 # github.com/opencontainers/go-digest v1.0.0
 ## explicit; go 1.13
 github.com/opencontainers/go-digest
@@ -308,16 +309,11 @@ github.com/opencontainers/go-digest
 ## explicit; go 1.18
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
-# github.com/opencontainers/runc v1.2.6
-## explicit; go 1.22
-github.com/opencontainers/runc/libcontainer/cgroups
-github.com/opencontainers/runc/libcontainer/cgroups/fs
-github.com/opencontainers/runc/libcontainer/cgroups/fs2
-github.com/opencontainers/runc/libcontainer/cgroups/fscommon
+# github.com/opencontainers/runc v1.3.0
+## explicit; go 1.23.0
 github.com/opencontainers/runc/libcontainer/configs
 github.com/opencontainers/runc/libcontainer/devices
-github.com/opencontainers/runc/libcontainer/utils
-# github.com/opencontainers/runtime-spec v1.2.0
+# github.com/opencontainers/runtime-spec v1.2.1
 ## explicit
 github.com/opencontainers/runtime-spec/specs-go
 # github.com/opencontainers/selinux v1.11.1

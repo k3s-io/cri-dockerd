@@ -11,14 +11,15 @@ require (
 	github.com/containernetworking/cni v1.1.2
 	github.com/coreos/go-systemd/v22 v22.5.0
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
-	github.com/docker/distribution v2.8.3+incompatible
+	github.com/distribution/reference v0.6.0
 	github.com/docker/docker v26.1.4+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/emicklei/go-restful v2.16.0+incompatible
 	github.com/golang/mock v1.6.0
+	github.com/opencontainers/cgroups v0.0.1
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.1.1
-	github.com/opencontainers/runc v1.2.6
+	github.com/opencontainers/runc v1.3.0
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.1
@@ -56,7 +57,6 @@ require (
 	github.com/containerd/containerd v1.6.26 // indirect
 	github.com/coreos/go-semver v0.3.1 // indirect
 	github.com/cyphar/filepath-securejoin v0.4.1 // indirect
-	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
@@ -94,8 +94,7 @@ require (
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
-	github.com/opencontainers/cgroups v0.0.1 // indirect
-	github.com/opencontainers/runtime-spec v1.2.0 // indirect
+	github.com/opencontainers/runtime-spec v1.2.1 // indirect
 	github.com/opencontainers/selinux v1.11.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_golang v1.22.0 // indirect
