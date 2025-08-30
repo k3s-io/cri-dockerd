@@ -29,8 +29,7 @@ import (
 	"github.com/opencontainers/cgroups"
 	cgroupfs "github.com/opencontainers/cgroups/fs"
 	cgroupfs2 "github.com/opencontainers/cgroups/fs2"
-	"github.com/opencontainers/runc/libcontainer/configs"
-	"github.com/opencontainers/runc/libcontainer/devices"
+	devices "github.com/opencontainers/cgroups/devices/config"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	utilversion "k8s.io/apimachinery/pkg/util/version"
@@ -121,10 +120,10 @@ func createCgroupManager(name string) (cgroups.Manager, error) {
 	}
 	logrus.Infof("Configuring resource-only container %s with memory limit %d", name, memoryLimit)
 
-	cg := &configs.Cgroup{
+	cg := &cgroups.Cgroup{
 		Parent: "/",
 		Name:   name,
-		Resources: &configs.Resources{
+		Resources: &cgroups.Resources{
 			Memory:      int64(memoryLimit),
 			MemorySwap:  -1,
 			SkipDevices: true,
