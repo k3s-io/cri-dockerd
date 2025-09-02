@@ -250,6 +250,7 @@ func NewDockerService(
 type dockerService struct {
 	// This handles unimplemented methods unless cri-dockerd overrides them
 	runtimeapi.UnimplementedRuntimeServiceServer
+	runtimeapi.UnimplementedImageServiceServer
 
 	client           libdocker.DockerClientInterface
 	os               config.OSInterface

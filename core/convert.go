@@ -46,7 +46,7 @@ func imageToRuntimeAPIImage(image *dockertypes.ImageSummary, pinned bool) (*runt
 		Id:          image.ID,
 		RepoTags:    image.RepoTags,
 		RepoDigests: image.RepoDigests,
-		Size_:       uint64(image.Size),
+		Size:       uint64(image.Size),
 		Pinned:      pinned,
 	}, nil
 }
@@ -60,7 +60,7 @@ func imageInspectToRuntimeAPIImage(image *dockertypes.ImageInspect, pinned bool)
 		Id:          image.ID,
 		RepoTags:    image.RepoTags,
 		RepoDigests: image.RepoDigests,
-		Size_:       uint64(image.Size),
+		Size:       uint64(image.Size),
 		Pinned:      pinned,
 	}
 
