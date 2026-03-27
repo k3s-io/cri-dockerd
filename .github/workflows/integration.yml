@@ -9,18 +9,18 @@ jobs:
     timeout-minutes: 60
     steps:
       - name: Checkout cri-dockerd
-        uses: actions/checkout@v3
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
         with:
           repository: ${{ github.repository }}
           path: src/github.com/Mirantis/cri-dockerd
 
       - name: Load environment
-        uses: c-py/action-dotenv-to-setenv@v4
+        uses: c-py/action-dotenv-to-setenv@80f488cda311f44d43e687a4e94f54a050b7822a # v4
         with:
           env-file: src/github.com/Mirantis/cri-dockerd/.github/.env
 
       - name: Set up Go ${{ env.GO_VERSION }}
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4
         with:
           go-version: ${{ env.GO_VERSION }}
         id: go
@@ -71,7 +71,7 @@ jobs:
           sudo cp $(command -v ginkgo) /usr/local/bin
 
       - name: Check out cri-tools
-        uses: actions/checkout@v3
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
         with:
           repository: kubernetes-sigs/cri-tools
           path: src/sigs.k8s.io/cri-tools
@@ -138,7 +138,7 @@ jobs:
 
       - name: Upload logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: logs
           path: logs
@@ -149,13 +149,13 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout cri-dockerd
-        uses: actions/checkout@v3
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
         with:
           repository: ${{ github.repository }}
           path: src/github.com/Mirantis/cri-dockerd
 
       - name: Load environment
-        uses: c-py/action-dotenv-to-setenv@v4
+        uses: c-py/action-dotenv-to-setenv@80f488cda311f44d43e687a4e94f54a050b7822a # v4
         with:
           env-file: src/github.com/Mirantis/cri-dockerd/.github/.env
 
@@ -173,7 +173,7 @@ jobs:
           curl -fsSL https://github.com/lima-vm/lima/releases/download/v${LIMA_VERSION}/lima-${LIMA_VERSION}-Linux-x86_64.tar.gz | sudo tar Cxzvf /usr/local -
 
       - name: "Cache ~/.cache/lima"
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/.cache/lima
           key: lima-${{ env.LIMA_VERSION }}-rocky-8
