@@ -81,7 +81,7 @@ func newNodeManager(ctx context.Context, client clientset.Interface, resyncInter
 
 	// initialize the informer and wait for cache sync
 	thisNodeInformerFactory.Start(wait.NeverStop)
-	if !cache.WaitForNamedCacheSync("node informer cache", ctx.Done(), nodeInformer.Informer().HasSynced) {
+	if !cache.WaitForNamedCacheSyncWithContext(ctx, nodeInformer.Informer().HasSynced) {
 		return nil, fmt.Errorf("can not sync node informer")
 	}
 
@@ -118,9 +118,9 @@ func newNodeManager(ctx context.Context, client clientset.Interface, resyncInter
 	// For backward-compatibility, we keep going even if we didn't find a node (in
 	// non-watchPodCIDRs mode) or it didn't have IPs.
 	if node == nil {
-		klog.FromContext(ctx).Error(nil, "Timed out waiting for node %q to exist", nodeName)
+		klog.FromContext(ctx).Error(nil, "Timed out waiting for node to exist", "node", klog.KRef("", nodeName))
 	} else if len(nodeIPs) == 0 {
-		klog.FromContext(ctx).Error(nil, "Timed out waiting for node %q to be assigned IPs", nodeName)
+		klog.FromContext(ctx).Error(nil, "Timed out waiting for node to be assigned IPs", "node", klog.KRef("", nodeName))
 	}
 
 	return &NodeManager{

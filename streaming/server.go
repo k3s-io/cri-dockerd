@@ -32,12 +32,10 @@ import (
 
 	restful "github.com/emicklei/go-restful"
 
-	"k8s.io/apimachinery/pkg/types"
 	remotecommandconsts "k8s.io/apimachinery/pkg/util/remotecommand"
-	"k8s.io/client-go/tools/remotecommand"
 	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
-	"k8s.io/kubelet/pkg/cri/streaming/portforward"
-	remotecommandserver "k8s.io/kubelet/pkg/cri/streaming/remotecommand"
+	"k8s.io/cri-streaming/pkg/streaming/portforward"
+	"k8s.io/cri-streaming/pkg/streaming/remotecommand"
 )
 
 // Server is the library interface to serve the stream requests.
@@ -276,14 +274,14 @@ func (s *server) serveExec(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	streamOpts := &remotecommandserver.Options{
+	streamOpts := &remotecommand.Options{
 		Stdin:  exec.Stdin,
 		Stdout: exec.Stdout,
 		Stderr: exec.Stderr,
 		TTY:    exec.Tty,
 	}
 
-	remotecommandserver.ServeExec(
+	remotecommand.ServeExec(
 		resp.ResponseWriter,
 		req.Request,
 		s.runtime,
@@ -310,13 +308,13 @@ func (s *server) serveAttach(req *restful.Request, resp *restful.Response) {
 		return
 	}
 
-	streamOpts := &remotecommandserver.Options{
+	streamOpts := &remotecommand.Options{
 		Stdin:  attach.Stdin,
 		Stdout: attach.Stdout,
 		Stderr: attach.Stderr,
 		TTY:    attach.Tty,
 	}
-	remotecommandserver.ServeAttach(
+	remotecommand.ServeAttach(
 		resp.ResponseWriter,
 		req.Request,
 		s.runtime,
@@ -366,18 +364,18 @@ type criAdapter struct {
 	Runtime
 }
 
-var _ remotecommandserver.Executor = &criAdapter{}
-var _ remotecommandserver.Attacher = &criAdapter{}
+var _ remotecommand.Executor = &criAdapter{}
+var _ remotecommand.Attacher = &criAdapter{}
 var _ portforward.PortForwarder = &criAdapter{}
 
-func (a *criAdapter) ExecInContainer(ctx context.Context, podname string, podUID types.UID, container string, cmd []string, in io.Reader, out, err io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error {
+func (a *criAdapter) ExecInContainer(ctx context.Context, podname string, podUID string, container string, cmd []string, in io.Reader, out, err io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize, timeout time.Duration) error {
 	return a.Runtime.Exec(ctx, container, cmd, in, out, err, tty, resize)
 }
 
-func (a *criAdapter) AttachContainer(ctx context.Context, podName string, podUID types.UID, container string, in io.Reader, out, err io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize) error {
+func (a *criAdapter) AttachContainer(ctx context.Context, podName string, podUID string, container string, in io.Reader, out, err io.WriteCloser, tty bool, resize <-chan remotecommand.TerminalSize) error {
 	return a.Runtime.Attach(ctx, container, in, out, err, tty, resize)
 }
 
-func (a *criAdapter) PortForward(ctx context.Context, podName string, podUID types.UID, port int32, stream io.ReadWriteCloser) error {
+func (a *criAdapter) PortForward(ctx context.Context, podName string, podUID string, port int32, stream io.ReadWriteCloser) error {
 	return a.Runtime.PortForward(ctx, podName, port, stream)
 }

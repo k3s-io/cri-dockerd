@@ -26,7 +26,7 @@ import (
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	"k8s.io/client-go/tools/remotecommand"
+	"k8s.io/cri-streaming/pkg/streaming/remotecommand"
 
 	mockclient "github.com/Mirantis/cri-dockerd/libdocker/testing"
 )
@@ -148,7 +148,6 @@ func TestExecInContainer(t *testing.T) {
 		assert.Equal(t, tc.expectError, err)
 	}
 }
-
 
 func getFakeContainerJSON() *dockertypes.ContainerJSON {
 	return &dockertypes.ContainerJSON{

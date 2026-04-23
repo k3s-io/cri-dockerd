@@ -22,7 +22,7 @@ import (
 	"io"
 	"time"
 
-	"k8s.io/client-go/tools/remotecommand"
+	"k8s.io/cri-streaming/pkg/streaming/remotecommand"
 
 	dockertypes "github.com/docker/docker/api/types"
 	"github.com/sirupsen/logrus"

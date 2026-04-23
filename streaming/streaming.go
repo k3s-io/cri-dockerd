@@ -24,11 +24,10 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/client-go/tools/remotecommand"
+	"k8s.io/cri-streaming/pkg/streaming"
+	"k8s.io/cri-streaming/pkg/streaming/remotecommand"
 
 	dockertypes "github.com/docker/docker/api/types"
-
-	"k8s.io/kubelet/pkg/cri/streaming"
 
 	"github.com/Mirantis/cri-dockerd/libdocker"
 )

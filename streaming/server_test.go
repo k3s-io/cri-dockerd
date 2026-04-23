@@ -30,13 +30,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"k8s.io/client-go/tools/remotecommand"
-
 	api "k8s.io/api/core/v1"
 	restclient "k8s.io/client-go/rest"
+	clientremotecommand "k8s.io/client-go/tools/remotecommand"
 	"k8s.io/client-go/transport/spdy"
 	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
-	kubeletportforward "k8s.io/kubelet/pkg/cri/streaming/portforward"
+	kubeletportforward "k8s.io/cri-streaming/pkg/streaming/portforward"
+	"k8s.io/cri-streaming/pkg/streaming/remotecommand"
 )
 
 const (
@@ -347,10 +347,10 @@ func runRemoteCommandTest(t *testing.T, commandType string) {
 
 	go func() {
 		defer wg.Done()
-		exec, err := remotecommand.NewSPDYExecutor(&restclient.Config{}, "POST", reqURL)
+		exec, err := clientremotecommand.NewSPDYExecutor(&restclient.Config{}, "POST", reqURL)
 		require.NoError(t, err)
 
-		opts := remotecommand.StreamOptions{
+		opts := clientremotecommand.StreamOptions{
 			Stdin:  stdinR,
 			Stdout: stdoutW,
 			Stderr: stderrW,

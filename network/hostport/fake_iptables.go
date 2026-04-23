@@ -163,8 +163,8 @@ func (f *fakeIPTables) ChainExists(
 
 // For testing, we want the kernel to always support IPTables
 // so we can test the iptables code paths
-func (f *fakeIPTables) Present() bool {
-	return true
+func (f *fakeIPTables) Present() error {
+	return nil
 }
 
 // Returns index of rule in array; < 0 if rule is not found

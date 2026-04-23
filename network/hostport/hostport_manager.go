@@ -77,6 +77,8 @@ func NewHostportManager(iptables utiliptables.Interface) HostPortManager {
 		logrus.Info(
 			"The binary conntrack is not installed, this can cause failures in network connection cleanup.",
 		)
+	} else {
+		h.conntrackFound = true
 	}
 
 	return h
@@ -218,23 +220,40 @@ func (hm *hostportManager) Add(
 			conntrackPortsToRemove,
 			isIPv6,
 		)
+		ipfamily := uint8(unix.AF_INET)
+		if isIPv6 {
+			ipfamily = uint8(unix.AF_INET6)
+		}
 		for _, port := range conntrackPortsToRemove {
-			filter := &netlink.ConntrackFilter{}
-			// udp protocol filter = 17
-			filter.AddProtocol(17)
-			filter.AddPort(netlink.ConntrackOrigDstPort, uint16(port))
-			conntrackExecer := conntrack.New()
-			ipfamily := unix.AF_INET
-			if isIPv6 {
-				ipfamily = unix.AF_INET6
-			}
-			_, err = conntrackExecer.ClearEntries(uint8(ipfamily), filter)
+			err = clearUDPConntrackEntriesForPort(ipfamily, port)
 			if err != nil {
 				logrus.Errorf("Failed to clear udp conntrack for port %d: %v", port, err)
 			}
 		}
 	}
 	return nil
+}
+
+func clearUDPConntrackEntriesForPort(ipFamily uint8, port int) error {
+	conntracker := conntrack.New()
+	entries, err := conntracker.ListEntries(ipFamily)
+	if err != nil {
+		return err
+	}
+
+	flows := make([]*netlink.ConntrackFlow, 0)
+	for _, entry := range entries {
+		if entry.Forward.Protocol != unix.IPPROTO_UDP {
+			continue
+		}
+		if int(entry.Forward.DstPort) != port {
+			continue
+		}
+		flows = append(flows, entry)
+	}
+
+	_, err = conntracker.DeleteEntries(ipFamily, flows)
+	return err
 }
 
 func (hm *hostportManager) Remove(id string, podPortMapping *PodPortMapping) (err error) {

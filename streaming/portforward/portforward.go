@@ -24,7 +24,7 @@ import (
 	"github.com/Mirantis/cri-dockerd/config"
 
 	"k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/apiserver/pkg/util/wsstream"
+	"k8s.io/streaming/pkg/httpstream/wsstream"
 )
 
 // PortForwarder knows how to forward content from a data stream to/from a port
